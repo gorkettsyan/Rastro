@@ -4,6 +4,8 @@ import { useAuthStore } from "./store/auth";
 import Login from "./pages/Login";
 import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
+import NewProject from "./pages/NewProject";
+import Project from "./pages/Project";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +22,8 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+          <Route path="/projects/new" element={<PrivateRoute><NewProject /></PrivateRoute>} />
+          <Route path="/projects/:id" element={<PrivateRoute><Project /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

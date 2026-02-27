@@ -1,8 +1,9 @@
 [project]
 name = "rastro-backend"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.12"
 dependencies = [
+    # PRD 1
     "fastapi==0.115.0",
     "uvicorn[standard]==0.32.0",
     "sqlalchemy[asyncio]==2.0.36",
@@ -17,6 +18,15 @@ dependencies = [
     "httpx==0.28.0",
     "cryptography==43.0.3",
     "python-multipart==0.0.18",
+    # PRD 2
+    "boto3==1.35.0",
+    "openai==1.57.0",
+    "tiktoken>=0.7.0",
+    "pypdf==5.1.0",
+    "python-docx==1.1.2",
+    "google-api-python-client==2.154.0",
+    "google-auth-httplib2==0.2.0",
+    "google-auth-oauthlib==1.2.1",
 ]
 
 [project.optional-dependencies]
@@ -26,6 +36,7 @@ test = [
     "pytest-mock==3.14.0",
     "httpx==0.28.0",
     "aiosqlite==0.20.0",
+    "moto[sqs,s3]==5.0.0",
 ]
 
 [build-system]

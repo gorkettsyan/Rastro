@@ -5,11 +5,15 @@ from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.database import Base
-from app.models import Organization, User, IntegrationToken  # noqa: F401
+from app.models import Organization, User, IntegrationToken, Project, Document, Chunk, SearchLog  # noqa: F401
 
 config = context.config
 if config.config_file_name:
-    fileConfig(config.config_file_name)
+    import configparser
+    cp = configparser.ConfigParser()
+    cp.read(config.config_file_name)
+    if cp.has_section("loggers"):
+        fileConfig(config.config_file_name)
 
 target_metadata = Base.metadata
 

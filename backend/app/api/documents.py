@@ -2,12 +2,13 @@ import uuid
 import hashlib
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update as sa_update, or_
+from sqlalchemy import select, update as sa_update, or_, and_, exists
 
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.chunk import Chunk
 from app.models.document import Document
+from app.models.project_member import ProjectMember
 from app.models.user import User
 from app.schemas.document import DocumentOut, DocumentList, DocumentUpdate
 from app.services.storage import upload_text
@@ -17,8 +18,20 @@ from app.worker.queue import enqueue
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 def _visible_to_user(user: User):
-    """SQLAlchemy clause: doc owner OR org-wide visibility."""
-    return or_(Document.indexed_by_user_id == user.id, Document.visibility == "org")
+    """SQLAlchemy clause: doc owner OR org-wide visibility OR project member."""
+    project_member_exists = exists(
+        select(ProjectMember.id).where(
+            and_(
+                ProjectMember.project_id == Document.project_id,
+                ProjectMember.user_id == user.id,
+            )
+        )
+    )
+    return or_(
+        Document.indexed_by_user_id == user.id,
+        Document.visibility == "org",
+        and_(Document.visibility == "project", Document.project_id.isnot(None), project_member_exists),
+    )
 
 
 ALLOWED_MIME_TYPES = {

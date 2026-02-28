@@ -9,6 +9,8 @@ import Project from "./pages/Project";
 import Chat from "./pages/Chat";
 import MemoryPage from "./pages/Memory";
 import Integrations from "./pages/Integrations";
+import Settings from "./pages/Settings";
+import InviteAccept from "./pages/InviteAccept";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +33,8 @@ export default function App() {
           <Route path="/chat/:conversationId" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/memory" element={<PrivateRoute><MemoryPage /></PrivateRoute>} />
           <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+          <Route path="/invite/:token" element={<InviteAccept />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

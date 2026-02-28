@@ -5,6 +5,7 @@ import { api } from "../api/client";
 import Header from "../components/Header";
 import SearchBar from "../components/SearchBar";
 import SearchResult from "../components/SearchResult";
+import ProjectMembers from "../components/ProjectMembers";
 import { CitedChunk } from "../components/CitationCard";
 
 interface ProjectData {
@@ -154,6 +155,9 @@ export default function Project() {
             </div>
           )}
         </div>
+
+        {/* Project members */}
+        {id && <ProjectMembers projectId={id} />}
       </main>
     </div>
   );

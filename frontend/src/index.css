@@ -885,3 +885,57 @@ body {
   color: var(--ink-primary);
   margin: 0;
 }
+
+/* ── Team / Invite ── */
+.r-invite-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.r-input {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-md);
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--ink-primary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.r-input:focus { border-color: var(--border-strong); }
+.r-input::placeholder { color: var(--ink-muted); }
+
+.r-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-md);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-primary);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.r-select:focus { border-color: var(--border-strong); }
+
+.r-invite-link-expires {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.r-invite-error {
+  font-size: 13px;
+  color: var(--color-error);
+  margin: var(--space-xs) 0 0 0;
+}
+
+/* ── Role pills ── */
+.r-pill-role-admin  { background: var(--color-warning-bg); color: var(--color-warning); }
+.r-pill-role-member { background: var(--color-success-bg); color: var(--color-success); }
+.r-pill-role-owner  { background: var(--color-warning-bg); color: var(--color-warning); }
+.r-pill-role-editor { background: var(--color-success-bg); color: var(--color-success); }
+.r-pill-role-viewer { background: var(--bg-accent-soft);   color: var(--ink-muted); }

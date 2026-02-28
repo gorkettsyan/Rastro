@@ -12,6 +12,8 @@ from app.models.user import User
 from app.models.project import Project
 from app.models.document import Document
 from app.models.chunk import Chunk
+from app.models.invite import Invite
+from app.models.project_member import ProjectMember
 from app.security import create_jwt
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -79,16 +81,58 @@ async def org_and_two_users(db_session):
         email=f"a-{uuid.uuid4().hex[:6]}@test.es",
         full_name="User A",
         google_id=f"google-{uuid.uuid4().hex}",
+        role="admin",
     )
     user_b = User(
         org_id=org.id,
         email=f"b-{uuid.uuid4().hex[:6]}@test.es",
         full_name="User B",
         google_id=f"google-{uuid.uuid4().hex}",
+        role="member",
     )
     db_session.add_all([user_a, user_b])
     await db_session.flush()
     return org, user_a, user_b
+
+
+@pytest_asyncio.fixture
+async def new_user(db_session):
+    """User in a different org — for invite acceptance tests."""
+    org = Organization(name="Other Despacho", slug=f"other-{uuid.uuid4().hex[:6]}")
+    db_session.add(org)
+    await db_session.flush()
+    user = User(
+        org_id=org.id,
+        email=f"new-{uuid.uuid4().hex[:6]}@test.es",
+        full_name="New User",
+        google_id=f"google-{uuid.uuid4().hex}",
+    )
+    db_session.add(user)
+    await db_session.flush()
+    return user
+
+
+@pytest_asyncio.fixture
+async def project_doc(db_session, org_and_two_users):
+    """Document with visibility='project' and project_id set, indexed by user_a."""
+    org, user_a, _ = org_and_two_users
+    proj = Project(org_id=org.id, title="Members Project", created_by=user_a.id)
+    db_session.add(proj)
+    await db_session.flush()
+    doc = Document(
+        org_id=org.id,
+        project_id=proj.id,
+        title="Project-visible doc",
+        source="upload",
+        source_id=f"upload-{uuid.uuid4().hex}",
+        indexing_status="done",
+        chunk_count=0,
+        indexed_by_user_id=user_a.id,
+        visibility="project",
+    )
+    db_session.add(doc)
+    await db_session.flush()
+    return proj, doc
 
 
 @pytest_asyncio.fixture

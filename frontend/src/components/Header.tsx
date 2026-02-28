@@ -14,6 +14,7 @@ export default function Header() {
     { label: t("nav_dashboard"), path: "/" },
     { label: t("nav_chat"), path: "/chat" },
     { label: t("nav_integrations"), path: "/integrations" },
+    { label: t("nav_settings"), path: "/settings" },
   ];
 
   const isActive = (path: string) =>

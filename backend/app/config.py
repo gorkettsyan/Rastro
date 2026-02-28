@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     s3_bucket: str = "rastro-documents"
     # PRD 4
     cohere_api_key: str | None = None
+    # PRD 7
+    app_url: str = "http://localhost:5173"
+    invite_token_expire_hours: int = 48
 
     class Config:
         env_file = ".env"

@@ -10,6 +10,8 @@ from app.models.document import Document
 from app.models.chunk import Chunk
 from app.services.embeddings import embed_texts
 
+from typing import Any
+
 _enc = tiktoken.get_encoding("cl100k_base")
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 50
@@ -43,6 +45,15 @@ def extract_text_from_bytes(content: bytes, mime_type: str) -> str:
         doc = DocxDoc(io.BytesIO(content))
         return "\n".join(p.text for p in doc.paragraphs)
     return content.decode("utf-8", errors="ignore")
+
+
+def make_document(user_id: uuid.UUID, **kwargs: Any) -> Document:
+    """Create a Document with visibility='private' and indexed_by_user_id set."""
+    return Document(
+        visibility="private",
+        indexed_by_user_id=user_id,
+        **kwargs,
+    )
 
 
 async def chunk_and_embed(

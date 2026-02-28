@@ -71,5 +71,10 @@
   "memory_placeholder": "Ej: Prefiero respuestas concisas",
   "delete_all_memories": "Borrar toda la memoria",
   "delete_all_confirm": "¿Seguro? Esto borrará todas tus memorias.",
-  "memory_empty_hint": "Las memorias se guardan automáticamente durante las conversaciones"
+  "memory_empty_hint": "Las memorias se guardan automáticamente durante las conversaciones",
+  "show_emails": "Mostrar correos",
+  "hide_emails": "Ocultar correos",
+  "pending": "Pendiente",
+  "done": "Hecho",
+  "untitled_document": "Documento sin título"
 }

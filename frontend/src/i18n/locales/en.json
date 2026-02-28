@@ -71,5 +71,10 @@
   "memory_placeholder": "E.g. I prefer concise answers",
   "delete_all_memories": "Clear all memory",
   "delete_all_confirm": "Are you sure? This will delete all your memories.",
-  "memory_empty_hint": "Memories are saved automatically during conversations"
+  "memory_empty_hint": "Memories are saved automatically during conversations",
+  "show_emails": "Show emails",
+  "hide_emails": "Hide emails",
+  "pending": "Pending",
+  "done": "Done",
+  "untitled_document": "Untitled document"
 }

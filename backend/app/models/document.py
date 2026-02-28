@@ -28,4 +28,8 @@ class Document(Base):
     indexing_status: Mapped[str] = mapped_column(String(50), default="pending")
     indexing_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    indexed_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    visibility: Mapped[str] = mapped_column(String(20), default="private", server_default="private")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

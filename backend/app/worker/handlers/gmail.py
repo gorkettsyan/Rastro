@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.models.document import Document
 from app.models.integration_token import IntegrationToken
 from app.security import decrypt
-from app.services.ingestion import chunk_and_embed
+from app.services.ingestion import chunk_and_embed, make_document
 from app.services.storage import upload_text
 from app.worker.queue import enqueue
 
@@ -168,7 +168,8 @@ async def enqueue_all_gmail_threads(org_id: str, user_id: str, db: AsyncSession)
         )
         doc = existing.scalar_one_or_none()
         if not doc:
-            doc = Document(
+            doc = make_document(
+                user_id=uuid.UUID(user_id),
                 id=uuid.uuid4(),
                 org_id=org_id,
                 title=thread.get("snippet", "Email thread")[:255],

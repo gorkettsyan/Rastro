@@ -1,8 +1,8 @@
 import uuid
 import hashlib
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update as sa_update
+from sqlalchemy import select, update as sa_update, or_
 
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -11,10 +11,15 @@ from app.models.document import Document
 from app.models.user import User
 from app.schemas.document import DocumentOut, DocumentList, DocumentUpdate
 from app.services.storage import upload_text
-from app.services.ingestion import extract_text_from_bytes
+from app.services.ingestion import extract_text_from_bytes, make_document
 from app.worker.queue import enqueue
 
 router = APIRouter(prefix="/documents", tags=["documents"])
+
+def _visible_to_user(user: User):
+    """SQLAlchemy clause: doc owner OR org-wide visibility."""
+    return or_(Document.indexed_by_user_id == user.id, Document.visibility == "org")
+
 
 ALLOWED_MIME_TYPES = {
     "application/pdf",
@@ -26,11 +31,19 @@ ALLOWED_MIME_TYPES = {
 @router.get("", response_model=DocumentList)
 async def list_documents(
     project_id: uuid.UUID | None = None,
+    include_emails: bool = Query(False),
+    source: str | None = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    q = select(Document).where(Document.org_id == current_user.org_id)
-    q = q.where(Document.source != "gmail")
+    q = select(Document).where(
+        Document.org_id == current_user.org_id,
+        _visible_to_user(current_user),
+    )
+    if not include_emails:
+        q = q.where(Document.source != "gmail")
+    if source:
+        q = q.where(Document.source == source)
     if project_id:
         q = q.where(Document.project_id == project_id)
     result = await db.execute(q.order_by(Document.created_at.desc()))
@@ -55,7 +68,8 @@ async def upload_document(
     s3_key = f"{current_user.org_id}/upload/{content_hash}.txt"
     upload_text(s3_key, raw_text)
 
-    doc = Document(
+    doc = make_document(
+        user_id=current_user.id,
         org_id=current_user.org_id,
         project_id=project_id,
         title=file.filename or "Documento sin título",
@@ -91,6 +105,7 @@ async def get_document_content(
         select(Document).where(
             Document.id == document_id,
             Document.org_id == current_user.org_id,
+            _visible_to_user(current_user),
         )
     )
     doc = doc_result.scalar_one_or_none()
@@ -125,6 +140,7 @@ async def update_document(
         select(Document).where(
             Document.id == document_id,
             Document.org_id == current_user.org_id,
+            _visible_to_user(current_user),
         )
     )
     doc = result.scalar_one_or_none()
@@ -151,7 +167,11 @@ async def delete_document(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Document).where(Document.id == document_id, Document.org_id == current_user.org_id)
+        select(Document).where(
+            Document.id == document_id,
+            Document.org_id == current_user.org_id,
+            _visible_to_user(current_user),
+        )
     )
     doc = result.scalar_one_or_none()
     if not doc:

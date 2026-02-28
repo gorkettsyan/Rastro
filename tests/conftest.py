@@ -64,6 +64,33 @@ async def auth_headers(org_and_user):
     return {"Authorization": f"Bearer {create_jwt(str(user.id))}"}
 
 
+def auth_header(user: User) -> dict:
+    """Build Authorization header for an arbitrary user."""
+    return {"Authorization": f"Bearer {create_jwt(str(user.id))}"}
+
+
+@pytest_asyncio.fixture
+async def org_and_two_users(db_session):
+    org = Organization(name="Shared Despacho", slug=f"shared-{uuid.uuid4().hex[:6]}")
+    db_session.add(org)
+    await db_session.flush()
+    user_a = User(
+        org_id=org.id,
+        email=f"a-{uuid.uuid4().hex[:6]}@test.es",
+        full_name="User A",
+        google_id=f"google-{uuid.uuid4().hex}",
+    )
+    user_b = User(
+        org_id=org.id,
+        email=f"b-{uuid.uuid4().hex[:6]}@test.es",
+        full_name="User B",
+        google_id=f"google-{uuid.uuid4().hex}",
+    )
+    db_session.add_all([user_a, user_b])
+    await db_session.flush()
+    return org, user_a, user_b
+
+
 @pytest_asyncio.fixture
 async def project(db_session, org_and_user):
     org, user = org_and_user
@@ -89,6 +116,8 @@ async def document(db_session, org_and_user, project):
         source_id=f"upload-{uuid.uuid4().hex}",
         indexing_status="done",
         chunk_count=2,
+        indexed_by_user_id=user.id,
+        visibility="private",
     )
     db_session.add(doc)
     await db_session.flush()
@@ -114,3 +143,21 @@ async def chunks_with_embeddings(db_session, org_and_user, project, document):
         chunks.append(c)
     await db_session.flush()
     return chunks
+
+
+@pytest_asyncio.fixture
+async def seed_gmail_doc(db_session, org_and_user):
+    org, user = org_and_user
+    doc = Document(
+        org_id=org.id,
+        title="Email thread: Contract review",
+        source="gmail",
+        source_id=f"gmail-{uuid.uuid4().hex}",
+        indexing_status="done",
+        chunk_count=1,
+        indexed_by_user_id=user.id,
+        visibility="private",
+    )
+    db_session.add(doc)
+    await db_session.flush()
+    return doc

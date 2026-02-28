@@ -21,6 +21,7 @@ async def test_extract_pdf_no_crash():
 @pytest.mark.asyncio
 async def test_chunk_and_embed_creates_chunks(db_session):
     from app.models.organization import Organization
+    from app.models.user import User
     from app.models.document import Document
     from app.models.chunk import Chunk
     from app.services.ingestion import chunk_and_embed
@@ -29,8 +30,11 @@ async def test_chunk_and_embed_creates_chunks(db_session):
     org = Organization(name="Org", slug=f"org-{uuid.uuid4().hex[:6]}")
     db_session.add(org)
     await db_session.flush()
+    user = User(org_id=org.id, email="u@test.es", full_name="U", google_id=f"g-{uuid.uuid4().hex}")
+    db_session.add(user)
+    await db_session.flush()
 
-    doc = Document(org_id=org.id, title="Test", source="upload", indexing_status="indexing")
+    doc = Document(org_id=org.id, title="Test", source="upload", indexing_status="indexing", indexed_by_user_id=user.id)
     db_session.add(doc)
     await db_session.flush()
 
@@ -48,14 +52,18 @@ async def test_chunk_and_embed_creates_chunks(db_session):
 @pytest.mark.asyncio
 async def test_chunk_and_embed_skips_short_text(db_session):
     from app.models.organization import Organization
+    from app.models.user import User
     from app.models.document import Document
     from app.services.ingestion import chunk_and_embed
 
     org = Organization(name="Org2", slug=f"org2-{uuid.uuid4().hex[:6]}")
     db_session.add(org)
     await db_session.flush()
+    user = User(org_id=org.id, email="u2@test.es", full_name="U2", google_id=f"g-{uuid.uuid4().hex}")
+    db_session.add(user)
+    await db_session.flush()
 
-    doc = Document(org_id=org.id, title="Empty", source="upload", indexing_status="indexing")
+    doc = Document(org_id=org.id, title="Empty", source="upload", indexing_status="indexing", indexed_by_user_id=user.id)
     db_session.add(doc)
     await db_session.flush()
 
@@ -66,6 +74,7 @@ async def test_chunk_and_embed_skips_short_text(db_session):
 @pytest.mark.asyncio
 async def test_chunk_and_embed_is_idempotent(db_session):
     from app.models.organization import Organization
+    from app.models.user import User
     from app.models.document import Document
     from app.models.chunk import Chunk
     from app.services.ingestion import chunk_and_embed
@@ -74,8 +83,11 @@ async def test_chunk_and_embed_is_idempotent(db_session):
     org = Organization(name="Org3", slug=f"org3-{uuid.uuid4().hex[:6]}")
     db_session.add(org)
     await db_session.flush()
+    user = User(org_id=org.id, email="u3@test.es", full_name="U3", google_id=f"g-{uuid.uuid4().hex}")
+    db_session.add(user)
+    await db_session.flush()
 
-    doc = Document(org_id=org.id, title="Doc", source="upload", indexing_status="indexing")
+    doc = Document(org_id=org.id, title="Doc", source="upload", indexing_status="indexing", indexed_by_user_id=user.id)
     db_session.add(doc)
     await db_session.flush()
 

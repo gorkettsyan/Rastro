@@ -166,7 +166,8 @@ async def send_message(
 
         query_vector = await _embed_query(retrieval_query)
         chunks = await _similarity_search(
-            db, current_user.org_id, query_vector, conv.project_id
+            db, current_user.org_id, query_vector, conv.project_id,
+            user_id=current_user.id,
         )
         context = _build_context(chunks)
 

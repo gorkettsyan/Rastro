@@ -12,6 +12,7 @@ class DocumentOut(BaseModel):
     source_url: str | None
     chunk_count: int
     indexing_status: str
+    visibility: str
     indexing_error: str | None
     indexed_at: datetime | None
     created_at: datetime

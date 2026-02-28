@@ -31,11 +31,29 @@ interface SearchState {
   streaming: boolean;
 }
 
-const SOURCE_LABEL: Record<string, string> = {
-  drive: "source_drive",
-  gmail: "source_gmail",
-  upload: "source_upload",
-};
+function SourceIcon({ source }: { source: string }) {
+  if (source === "drive") {
+    return (
+      <svg className="r-source-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M12 2L2 19h20L12 2z" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (source === "gmail") {
+    return (
+      <svg className="r-source-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="2" y="4" width="20" height="16" rx="2" />
+        <path d="M22 4L12 13 2 4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  return (
+    <svg className="r-source-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+      <path d="M14 2v6h6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function statusPillClass(status: string) {
   if (status === "done") return "r-pill indexed";
@@ -51,6 +69,15 @@ export default function Dashboard() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchState, setSearchState] = useState<SearchState | null>(null);
+  const [showEmails, setShowEmails] = useState(false);
+  const [emailCount, setEmailCount] = useState(0);
+
+  const fetchDocuments = async (includeEmails: boolean) => {
+    const params: Record<string, string> = {};
+    if (includeEmails) params.include_emails = "true";
+    const docsRes = await api.get("/documents", { params });
+    setDocuments(docsRes.data.items);
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -59,12 +86,14 @@ export default function Dashboard() {
           const { data } = await api.get("/auth/me");
           setUser(data);
         }
-        const [projectsRes, docsRes] = await Promise.all([
+        const [projectsRes, docsRes, emailRes] = await Promise.all([
           api.get("/projects"),
           api.get("/documents"),
+          api.get("/documents", { params: { source: "gmail", include_emails: "true" } }),
         ]);
         setProjects(projectsRes.data.items);
         setDocuments(docsRes.data.items);
+        setEmailCount(emailRes.data.total);
       } catch {
         navigate("/login");
       } finally {
@@ -74,7 +103,11 @@ export default function Dashboard() {
     init();
   }, []);
 
-  const nonGmailDocs = documents.filter((d) => d.source !== "gmail");
+  const toggleEmails = async () => {
+    const next = !showEmails;
+    setShowEmails(next);
+    await fetchDocuments(next);
+  };
 
   return (
     <div className="r-page">
@@ -136,9 +169,14 @@ export default function Dashboard() {
           <div className="r-section">
             <div className="r-section-header">
               <p className="r-section-label">{t("all_documents")}</p>
+              {emailCount > 0 && (
+                <button className="r-btn-filter" onClick={toggleEmails}>
+                  {showEmails ? t("hide_emails") : t("show_emails")} ({emailCount})
+                </button>
+              )}
             </div>
 
-            {nonGmailDocs.length === 0 ? (
+            {documents.length === 0 ? (
               <div className="r-empty">
                 <span className="r-empty-icon">📄</span>
                 <p className="r-empty-title">{t("no_docs_title")}</p>
@@ -146,10 +184,10 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="r-doc-list">
-                {nonGmailDocs.map((doc) => (
+                {documents.map((doc) => (
                   <div key={doc.id} className="r-doc-row">
-                    <span className="r-doc-title">{doc.title}</span>
-                    <span className="r-doc-source">{t(SOURCE_LABEL[doc.source] ?? doc.source)}</span>
+                    <SourceIcon source={doc.source} />
+                    <span className="r-doc-title">{doc.title || t("untitled_document")}</span>
                     <span className={statusPillClass(doc.indexing_status)}>
                       {t(doc.indexing_status === "done" ? "indexed"
                         : doc.indexing_status === "error" ? "error"

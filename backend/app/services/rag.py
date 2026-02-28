@@ -42,6 +42,7 @@ def _make_system_prompt(language: str) -> str:
     instruction = _LANG_INSTRUCTIONS.get(language, _LANG_INSTRUCTIONS["en"])
     return _SYSTEM_PROMPT_BASE + instruction
 
+
 _QUERY_REWRITE_PROMPT = (
     "You are a search query optimizer. Given the user's original query, return an improved "
     "version that is better suited for semantic and keyword search over legal documents. "
@@ -83,10 +84,15 @@ async def _vector_search(
     query_vector: list[float],
     project_id: uuid.UUID | None = None,
     limit: int = TOP_K_VECTOR,
+    user_id: uuid.UUID | None = None,
 ) -> list[dict]:
     """Cosine similarity search using pgvector."""
     vector_str = "[" + ",".join(str(v) for v in query_vector) + "]"
     scope = "AND c.project_id = CAST(:project_id AS uuid)" if project_id else ""
+    visibility = (
+        "AND (d.indexed_by_user_id = CAST(:user_id AS uuid) OR d.visibility = 'org')"
+        if user_id else ""
+    )
 
     sql = text(f"""
         SELECT
@@ -101,6 +107,7 @@ async def _vector_search(
         JOIN documents d ON d.id = c.document_id
         WHERE c.org_id = CAST(:org_id AS uuid)
           {scope}
+          {visibility}
           AND c.embedding IS NOT NULL
         ORDER BY c.embedding <=> CAST(:embedding AS vector)
         LIMIT :limit
@@ -109,6 +116,8 @@ async def _vector_search(
     params: dict = {"embedding": vector_str, "org_id": str(org_id), "limit": limit}
     if project_id:
         params["project_id"] = str(project_id)
+    if user_id:
+        params["user_id"] = str(user_id)
 
     result = await db.execute(sql, params)
     rows = result.fetchall()
@@ -135,9 +144,14 @@ async def _bm25_search(
     query: str,
     project_id: uuid.UUID | None = None,
     limit: int = TOP_K_BM25,
+    user_id: uuid.UUID | None = None,
 ) -> list[dict]:
     """Full-text search using the stored content_tsv column (Spanish + English configs)."""
     scope = "AND c.project_id = CAST(:project_id AS uuid)" if project_id else ""
+    visibility = (
+        "AND (d.indexed_by_user_id = CAST(:user_id AS uuid) OR d.visibility = 'org')"
+        if user_id else ""
+    )
 
     sql = text(f"""
         SELECT
@@ -155,6 +169,7 @@ async def _bm25_search(
         JOIN documents d ON d.id = c.document_id
         WHERE c.org_id = CAST(:org_id AS uuid)
           {scope}
+          {visibility}
           AND c.content_tsv @@ (
                 websearch_to_tsquery('spanish', :query) ||
                 websearch_to_tsquery('english', :query)
@@ -166,6 +181,8 @@ async def _bm25_search(
     params: dict = {"query": query, "org_id": str(org_id), "limit": limit}
     if project_id:
         params["project_id"] = str(project_id)
+    if user_id:
+        params["user_id"] = str(user_id)
 
     try:
         result = await db.execute(sql, params)
@@ -269,8 +286,8 @@ async def stream_rag_response(
 
         # 3. Parallel retrieval
         vector_results, bm25_results = await asyncio.gather(
-            _vector_search(db, org_id, query_vector, project_id),
-            _bm25_search(db, org_id, rewritten, project_id),
+            _vector_search(db, org_id, query_vector, project_id, user_id=user_id),
+            _bm25_search(db, org_id, rewritten, project_id, user_id=user_id),
         )
 
         # 4. RRF fusion

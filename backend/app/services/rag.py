@@ -23,14 +23,24 @@ TOP_K_BM25 = 20
 TOP_K_RERANK = 5
 RRF_K = 60
 
-_SYSTEM_PROMPT = (
+_SYSTEM_PROMPT_BASE = (
     "You are an expert assistant that helps users find information in their organization's documents. "
     "Answer ONLY based on the provided fragments. Cite sources using the format [Source N]. "
     "If you cannot answer with the available information, say so clearly. "
     "Never invent data or assume information not present in the fragments. "
-    "IMPORTANT: Always respond in the exact same language the user wrote their question in. "
-    "If the user writes in English, respond in English. If in Spanish, respond in Spanish."
 )
+
+_LANG_INSTRUCTIONS = {
+    "en": "IMPORTANT: Always respond in English, regardless of the language of the documents.",
+    "es": "IMPORTANTE: Responde siempre en español, independientemente del idioma de los documentos.",
+}
+
+_SYSTEM_PROMPT = _SYSTEM_PROMPT_BASE + _LANG_INSTRUCTIONS["en"]
+
+
+def _make_system_prompt(language: str) -> str:
+    instruction = _LANG_INSTRUCTIONS.get(language, _LANG_INSTRUCTIONS["en"])
+    return _SYSTEM_PROMPT_BASE + instruction
 
 _QUERY_REWRITE_PROMPT = (
     "You are a search query optimizer. Given the user's original query, return an improved "
@@ -214,7 +224,7 @@ SYSTEM_PROMPT = _SYSTEM_PROMPT
 
 def _build_context(chunks: list[dict]) -> str:
     return "\n\n".join(
-        f"[Fuente {i}]\n{c['content']}" for i, c in enumerate(chunks, 1)
+        f"[Source {i}]\n{c['content']}" for i, c in enumerate(chunks, 1)
     )
 
 
@@ -224,6 +234,7 @@ async def stream_rag_response(
     user_id: uuid.UUID,
     query: str,
     project_id: uuid.UUID | None = None,
+    language: str = "en",
 ) -> AsyncGenerator[str, None]:
     """
     Full hybrid RAG pipeline as an async SSE generator.
@@ -268,6 +279,8 @@ async def stream_rag_response(
         if not fused:
             no_results_msg = (
                 "No encontré información relevante en los documentos disponibles."
+                if language == "es"
+                else "I couldn't find relevant information in the available documents."
             )
             yield f"data: {json.dumps({'type': 'token', 'content': no_results_msg})}\n\n"
             yield f"data: {json.dumps({'type': 'sources', 'sources': []})}\n\n"
@@ -285,7 +298,7 @@ async def stream_rag_response(
         stream = await _openai.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "system", "content": _make_system_prompt(language)},
                 {"role": "user", "content": f"{context}\n\n{query}"},
             ],
             stream=True,

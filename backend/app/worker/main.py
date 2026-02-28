@@ -10,6 +10,7 @@ from app.worker.handlers.upload import handle_manual_upload
 from app.worker.handlers.drive import handle_drive_file
 from app.worker.handlers.gmail import handle_gmail_thread
 from app.worker.handlers.memory import handle_extract_memories
+from app.worker.handlers.message_embedder import handle_embed_message
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ HANDLERS = {
     "drive_file": handle_drive_file,
     "gmail_thread": handle_gmail_thread,
     "extract_memories": handle_extract_memories,
+    "embed_message": handle_embed_message,
 }
 
 engine = create_async_engine(settings.database_url)

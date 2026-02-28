@@ -102,7 +102,7 @@ export default function Chat() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("rastro_token")}`,
           },
-          body: JSON.stringify({ message: text }),
+          body: JSON.stringify({ message: text, language: localStorage.getItem("rastro_lang") || "es" }),
         }
       );
 

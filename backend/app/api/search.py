@@ -17,12 +17,13 @@ router = APIRouter(prefix="/search", tags=["search"])
 async def search_stream(
     q: str = Query(..., min_length=1),
     project_id: uuid.UUID | None = Query(None),
+    lang: str = Query("en"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """SSE endpoint — streams: token events, sources event, done event."""
     async def generate():
-        async for event in stream_rag_response(db, user.org_id, user.id, q, project_id):
+        async for event in stream_rag_response(db, user.org_id, user.id, q, project_id, language=lang):
             yield event
 
     return StreamingResponse(

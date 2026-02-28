@@ -1,5 +1,8 @@
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 from app.api.auth import router as auth_router
 from app.api.projects import router as projects_router
 from app.api.documents import router as documents_router

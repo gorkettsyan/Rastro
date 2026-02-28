@@ -31,18 +31,25 @@ _openai = AsyncOpenAI(api_key=settings.openai_api_key)
 
 HISTORY_LIMIT = 20
 
-# Chat prompt allows answering from both fragments AND conversation history,
-# so follow-up questions like "how many?" work correctly.
-# Written in English so GPT-4o doesn't default to Spanish when documents are in Spanish.
-_CHAT_SYSTEM_PROMPT = (
+_CHAT_SYSTEM_PROMPT_BASE = (
     "You are an expert assistant that helps users find information in their organization's documents. "
     "Answer based on the provided document fragments and the conversation history. "
     "When citing a fragment, use the format [Source N]. "
     "If you cannot find relevant information in the fragments or conversation history, say so clearly. "
     "Never invent data. "
-    "IMPORTANT: Always respond in the exact same language the user wrote their message in. "
-    "If the user writes in English, respond in English. If in Spanish, respond in Spanish."
+    "If user context is provided, treat each memory item as an independent fact — "
+    "do NOT infer connections or relationships between separate memory items. "
 )
+
+_CHAT_LANG_INSTRUCTIONS = {
+    "en": "IMPORTANT: Always respond in English, regardless of the language of the documents.",
+    "es": "IMPORTANTE: Responde siempre en español, independientemente del idioma de los documentos.",
+}
+
+
+def _make_chat_system_prompt(language: str) -> str:
+    instruction = _CHAT_LANG_INSTRUCTIONS.get(language, _CHAT_LANG_INSTRUCTIONS["en"])
+    return _CHAT_SYSTEM_PROMPT_BASE + instruction
 
 
 @router.get("", response_model=ConversationList)
@@ -164,10 +171,10 @@ async def send_message(
         context = _build_context(chunks)
 
         # 4. Fetch memories
-        memory_block = await get_memories_for_prompt(db, current_user.id)
+        memory_block = await get_memories_for_prompt(db, current_user.id, current_query=body.message)
 
         # 5. Build messages array for GPT-4o
-        system_content = _CHAT_SYSTEM_PROMPT + memory_block
+        system_content = _make_chat_system_prompt(body.language) + memory_block
         gpt_messages = [{"role": "system", "content": system_content}]
 
         for msg in history:
@@ -221,12 +228,16 @@ async def send_message(
 
         await db.commit()
 
-        # 10. Enqueue memory extraction
+        # 10. Enqueue memory extraction and message embedding
         enqueue({
             "job_type": "extract_memories",
             "user_id": str(current_user.id),
             "org_id": str(current_user.org_id),
             "conversation_id": str(conversation_id),
+        })
+        enqueue({
+            "job_type": "embed_message",
+            "message_id": str(assistant_msg.id),
         })
 
     return StreamingResponse(generate(), media_type="text/event-stream")

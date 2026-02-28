@@ -37,6 +37,7 @@ class MessageOut(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str
+    language: str = "es"
 
 
 class ConversationDetail(BaseModel):

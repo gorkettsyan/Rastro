@@ -12,22 +12,27 @@ from app.services.embeddings import embed_texts
 log = logging.getLogger(__name__)
 _openai = AsyncOpenAI(api_key=settings.openai_api_key)
 
-EXTRACTION_PROMPT = """Analiza esta conversación y extrae hechos concretos y útiles sobre el usuario.
-Solo incluye información factual y duradera (preferencias, área de trabajo, contexto profesional).
-No incluyas el contenido de los documentos, solo información sobre el propio usuario.
+EXTRACTION_PROMPT = """Analyze this conversation and extract two types of useful information about the user.
 
-Devuelve ÚNICAMENTE un array JSON de strings. Si no hay nada que recordar, devuelve [].
+TYPE 1 — DURABLE FACTS: Long-term facts about the user (preferences, work area, professional context, communication style).
+Examples:
+- "Works primarily in corporate/mercantile law"
+- "Clients are typically Spanish SMEs"
+- "Prefers concise responses"
+- "Office is based in Madrid"
 
-Ejemplos de memorias válidas:
-- "Trabaja principalmente en derecho mercantil"
-- "Sus clientes suelen ser pymes españolas"
-- "Prefiere respuestas en español y concisas"
-- "El despacho tiene sede en Madrid"
+TYPE 2 — RECENT TOPICS: Topics, questions, or tasks the user engaged with in this conversation. These help recall cross-conversation context.
+Examples:
+- "Asked about chess.com streak notification emails received in February 2026"
+- "Searched for rent contract clauses related to early termination"
+- "Discussed a supplier agreement with a 30-day payment term"
 
-Ejemplos de memorias NO válidas (no incluir):
-- Contenido específico de documentos o contratos
-- Información sobre terceros (clientes, contrapartes)
-- Preguntas puntuales sin contexto duradero"""
+Do NOT include:
+- Specific sensitive document content (names, amounts, parties)
+- Pure debugging or meta questions ("why is it slow?")
+
+Return a JSON object with a single key "memories" whose value is an array of strings.
+If there is nothing worth capturing, return {"memories": []}."""
 
 DUPLICATE_THRESHOLD = 0.92
 
@@ -123,20 +128,143 @@ async def extract_and_store_memories(
     return stored
 
 
-async def get_memories_for_prompt(db: AsyncSession, user_id) -> str:
+async def get_memories_for_prompt(
+    db: AsyncSession, user_id, current_query: str | None = None
+) -> str:
     """
     Returns formatted memory block for system prompt injection.
-    Returns empty string if no memories.
+    Part 1: extracted facts about the user (always included).
+    Part 2: semantically relevant past exchanges (when current_query provided).
+    Returns empty string if no data found.
     """
-    result = await db.execute(
-        select(Memory)
-        .where(Memory.user_id == user_id)
-        .order_by(Memory.created_at.desc())
-        .limit(20)
-    )
-    memories = result.scalars().all()
-    if not memories:
-        return ""
+    parts = []
 
-    lines = "\n".join(f"- {m.content}" for m in memories)
-    return f"\n\n[What I remember about this user]\n{lines}"
+    if current_query:
+        try:
+            query_embeddings = await embed_texts([current_query])
+            vector_str = "[" + ",".join(str(v) for v in query_embeddings[0]) + "]"
+
+            # Fetch only memories that are semantically relevant to the current query.
+            # This prevents unrelated memories from being combined by the model.
+            mem_sql = text("""
+                SELECT content,
+                       1 - (embedding <=> CAST(:embedding AS vector)) AS score
+                FROM memories
+                WHERE user_id = :user_id
+                  AND embedding IS NOT NULL
+                ORDER BY embedding <=> CAST(:embedding AS vector)
+                LIMIT 5
+            """)
+            async with db.begin_nested():
+                mem_result = await db.execute(
+                    mem_sql, {"user_id": str(user_id), "embedding": vector_str}
+                )
+                mem_rows = mem_result.fetchall()
+
+            # Only include memories with meaningful similarity (score > 0.5)
+            relevant_memories = [r for r in mem_rows if r.score > 0.5]
+
+            log.info(
+                f"Memories: {len(mem_rows)} candidates, {len(relevant_memories)} relevant "
+                f"for user {user_id}. Scores: "
+                + ", ".join(f"{r.score:.2f}" for r in mem_rows[:5])
+            )
+
+            if relevant_memories:
+                lines = "\n".join(f"- {r.content}" for r in relevant_memories)
+                parts.append(f"[What I remember about this user]\n{lines}")
+
+            past_sql = text("""
+                SELECT
+                    a_msg.content AS answer,
+                    (SELECT u.content FROM messages u
+                     WHERE u.conversation_id = a_msg.conversation_id
+                       AND u.role = 'user'
+                       AND u.created_at <= a_msg.created_at
+                     ORDER BY u.created_at DESC
+                     LIMIT 1) AS question,
+                    1 - (a_msg.embedding <=> CAST(:embedding AS vector)) AS score
+                FROM messages a_msg
+                JOIN conversations c ON c.id = a_msg.conversation_id
+                WHERE c.user_id = :user_id
+                  AND a_msg.embedding IS NOT NULL
+                  AND a_msg.role = 'assistant'
+                ORDER BY a_msg.embedding <=> CAST(:embedding AS vector)
+                LIMIT 10
+            """)
+            # Use a savepoint so a SQL failure (e.g. pgvector unavailable) does not
+            # abort the outer transaction — only this nested block is rolled back.
+            async with db.begin_nested():
+                past_result = await db.execute(
+                    past_sql, {"user_id": str(user_id), "embedding": vector_str}
+                )
+                past_rows = past_result.fetchall()
+
+            # Deduplicate: skip answers that start identically (e.g. repeated
+            # "I don't have access" responses), keep at most 3 unique exchanges.
+            seen_prefixes: set[str] = set()
+            unique_rows = []
+            for row in past_rows:
+                prefix = row.answer[:80].strip()
+                if prefix in seen_prefixes:
+                    continue
+                seen_prefixes.add(prefix)
+                unique_rows.append(row)
+                if len(unique_rows) == 3:
+                    break
+
+            log.info(
+                f"Past exchanges: {len(past_rows)} found, {len(unique_rows)} unique "
+                f"for user {user_id}. Scores: "
+                + ", ".join(f"{r.score:.2f}" for r in past_rows[:5])
+            )
+
+            # Only inject past exchanges with a meaningful (but not near-identical)
+            # similarity score. Near-identical scores (> 0.88) mean the user is
+            # re-asking the same question — injecting the old answer creates a
+            # feedback loop that permanently enshrines wrong answers.
+            quality_rows = [r for r in unique_rows if 0.55 < r.score < 0.88]
+            log.info(
+                f"Past exchanges after quality filter: {len(quality_rows)}/{len(unique_rows)} kept "
+                f"(thresholds 0.55–0.88)"
+            )
+
+            if quality_rows:
+                lines = []
+                for row in quality_rows:
+                    if row.question:
+                        lines.append(f"- Q: {row.question[:200]}\n  A: {row.answer[:300]}")
+                    else:
+                        lines.append(f"- {row.answer[:300]}")
+                parts.append("[Relevant past exchanges]\n" + "\n".join(lines))
+        except Exception as e:
+            log.warning(f"Memory/exchange retrieval failed: {e}")  # pgvector unavailable or embed failed
+            # Fallback: inject most recent memories without semantic filtering
+            fallback = await db.execute(
+                select(Memory)
+                .where(Memory.user_id == user_id)
+                .order_by(Memory.created_at.desc())
+                .limit(10)
+            )
+            memories = fallback.scalars().all()
+            if memories:
+                lines = "\n".join(f"- {m.content}" for m in memories)
+                parts.append(f"[What I remember about this user]\n{lines}")
+    else:
+        # No query available — inject most recent memories without semantic filtering
+        fallback = await db.execute(
+            select(Memory)
+            .where(Memory.user_id == user_id)
+            .order_by(Memory.created_at.desc())
+            .limit(10)
+        )
+        memories = fallback.scalars().all()
+        if memories:
+            lines = "\n".join(f"- {m.content}" for m in memories)
+            parts.append(f"[What I remember about this user]\n{lines}")
+
+    if not parts:
+        return ""
+    result = "\n\n" + "\n\n".join(parts)
+    log.info(f"Memory block injected for user {user_id}:\n{result}")
+    return result

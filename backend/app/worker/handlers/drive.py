@@ -41,22 +41,26 @@ async def handle_drive_file(body: dict, db: AsyncSession) -> None:
     doc.indexing_status = "indexing"
     await db.flush()
 
-    service = _drive_service(decrypt(token.access_token_enc))
-    file_meta = service.files().get(fileId=body["source_id"], fields="id,name,mimeType").execute()
-    mime_type = file_meta["mimeType"]
+    try:
+        service = _drive_service(decrypt(token.access_token_enc))
+        file_meta = service.files().get(fileId=body["source_id"], fields="id,name,mimeType").execute()
+        mime_type = file_meta["mimeType"]
 
-    if mime_type == "application/vnd.google-apps.document":
-        content = service.files().export(fileId=body["source_id"], mimeType="text/plain").execute()
-        raw_text = content.decode("utf-8", errors="ignore")
-    else:
-        content = service.files().get_media(fileId=body["source_id"]).execute()
-        raw_text = extract_text_from_bytes(content, mime_type)
+        if mime_type == "application/vnd.google-apps.document":
+            content = service.files().export(fileId=body["source_id"], mimeType="text/plain").execute()
+            raw_text = content.decode("utf-8", errors="ignore")
+        else:
+            content = service.files().get_media(fileId=body["source_id"]).execute()
+            raw_text = extract_text_from_bytes(content, mime_type)
 
-    s3_key = f"{doc.org_id}/drive/{body['source_id']}.txt"
-    upload_text(s3_key, raw_text)
-    doc.file_path = s3_key
+        s3_key = f"{doc.org_id}/drive/{body['source_id']}.txt"
+        upload_text(s3_key, raw_text)
+        doc.file_path = s3_key
 
-    await chunk_and_embed(db, doc, raw_text, extra_metadata={"source": "drive", "file_name": file_meta["name"]})
+        await chunk_and_embed(db, doc, raw_text, extra_metadata={"source": "drive", "file_name": file_meta["name"]})
+    except Exception as e:
+        doc.indexing_status = "error"
+        doc.indexing_error = str(e)[:500]
 
 
 async def enqueue_all_drive_files(org_id: str, user_id: str, db: AsyncSession) -> int:

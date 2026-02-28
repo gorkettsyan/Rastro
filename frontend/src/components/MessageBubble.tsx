@@ -1,4 +1,6 @@
+import { useState } from "react";
 import CitationCard from "./CitationCard";
+import DocumentModal from "./DocumentModal";
 
 interface Source {
   document_id: string;
@@ -18,6 +20,7 @@ interface Props {
 
 export default function MessageBubble({ role, content, sources = [], streaming }: Props) {
   const isUser = role === "user";
+  const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
@@ -35,11 +38,23 @@ export default function MessageBubble({ role, content, sources = [], streaming }
         {!isUser && sources.length > 0 && !streaming && (
           <div className="mt-2 grid gap-1.5">
             {sources.map((s, i) => (
-              <CitationCard key={s.document_id + i} index={i + 1} source={s} />
+              <CitationCard
+                key={s.document_id + i}
+                index={i + 1}
+                source={s}
+                onExpand={setExpandedDocId}
+              />
             ))}
           </div>
         )}
       </div>
+
+      {expandedDocId && (
+        <DocumentModal
+          documentId={expandedDocId}
+          onClose={() => setExpandedDocId(null)}
+        />
+      )}
     </div>
   );
 }

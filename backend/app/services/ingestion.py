@@ -53,6 +53,9 @@ async def chunk_and_embed(
 ) -> int:
     """Chunks, embeds, and stores in pgvector. Idempotent. Returns chunk count."""
     if not raw_text or len(raw_text.strip()) < 50:
+        document.indexing_status = "done"
+        document.chunk_count = 0
+        document.indexed_at = datetime.now(timezone.utc)
         return 0
 
     await db.execute(delete(Chunk).where(Chunk.document_id == document.id))

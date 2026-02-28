@@ -12,5 +12,9 @@ async def handle_manual_upload(body: dict, db: AsyncSession) -> None:
         raise ValueError(f"Document not found or missing file_path: {body['document_id']}")
     doc.indexing_status = "indexing"
     await db.flush()
-    raw_text = download_text(doc.file_path)
-    await chunk_and_embed(db, doc, raw_text)
+    try:
+        raw_text = download_text(doc.file_path)
+        await chunk_and_embed(db, doc, raw_text)
+    except Exception as e:
+        doc.indexing_status = "error"
+        doc.indexing_error = str(e)[:500]

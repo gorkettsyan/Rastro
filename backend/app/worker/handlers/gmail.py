@@ -119,20 +119,24 @@ async def handle_gmail_thread(body: dict, db: AsyncSession) -> None:
     doc.indexing_status = "indexing"
     await db.flush()
 
-    service = _gmail_service(decrypt(token.access_token_enc))
-    thread_data = service.users().threads().get(userId="me", id=body["source_id"], format="full").execute()
-    subject, raw_text = _extract_thread_text(thread_data)
+    try:
+        service = _gmail_service(decrypt(token.access_token_enc))
+        thread_data = service.users().threads().get(userId="me", id=body["source_id"], format="full").execute()
+        subject, raw_text = _extract_thread_text(thread_data)
 
-    if not raw_text.strip():
-        doc.indexing_status = "done"
-        return
+        if not raw_text.strip():
+            doc.indexing_status = "done"
+            return
 
-    s3_key = f"{doc.org_id}/gmail/{body['source_id']}.txt"
-    upload_text(s3_key, raw_text)
-    doc.file_path = s3_key
-    doc.title = subject
+        s3_key = f"{doc.org_id}/gmail/{body['source_id']}.txt"
+        upload_text(s3_key, raw_text)
+        doc.file_path = s3_key
+        doc.title = subject
 
-    await chunk_and_embed(db, doc, raw_text, extra_metadata={"source": "gmail", "thread_id": body["source_id"]})
+        await chunk_and_embed(db, doc, raw_text, extra_metadata={"source": "gmail", "thread_id": body["source_id"]})
+    except Exception as e:
+        doc.indexing_status = "error"
+        doc.indexing_error = str(e)[:500]
 
 
 async def enqueue_all_gmail_threads(org_id: str, user_id: str, db: AsyncSession) -> int:

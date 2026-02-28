@@ -20,6 +20,10 @@ class DocumentOut(BaseModel):
         from_attributes = True
 
 
+class DocumentUpdate(BaseModel):
+    project_id: uuid.UUID | None = None
+
+
 class DocumentList(BaseModel):
     items: list[DocumentOut]
     total: int

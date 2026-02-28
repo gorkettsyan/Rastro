@@ -3,6 +3,10 @@ import json
 from unittest.mock import patch, MagicMock, AsyncMock
 from httpx import AsyncClient
 
+from app.services.rag import rag_service
+from app.services.memory_extractor import memory_extractor_service
+from app.worker.queue import queue_service
+
 
 @pytest.mark.asyncio
 async def test_create_conversation(client: AsyncClient, auth_headers):
@@ -42,10 +46,10 @@ async def test_send_message_streams(client: AsyncClient, auth_headers, db_sessio
     mock_stream.__aiter__ = lambda self: _aiter()
 
     with patch("app.api.chat._openai") as mock_openai, \
-         patch("app.api.chat._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.api.chat._similarity_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.api.chat.get_memories_for_prompt", new_callable=AsyncMock, return_value=""), \
-         patch("app.api.chat.enqueue"):
+         patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(memory_extractor_service, "get_memories_for_prompt", new_callable=AsyncMock, return_value=""), \
+         patch.object(queue_service, "enqueue"):
         mock_openai.chat.completions.create = AsyncMock(return_value=mock_stream)
 
         resp = await client.post(

@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from httpx import AsyncClient
 
 from app.models.search_log import SearchLog
+from app.services.rag import rag_service
 from sqlalchemy import select
 
 
@@ -127,7 +128,7 @@ async def test_search_stream_returns_sse_events(
         }
     ]
 
-    with patch("app.api.search.rag_stream") as mock_rag_stream:
+    with patch.object(rag_service, "stream_rag_response") as mock_rag_stream:
         async def _gen(*args, **kwargs):
             yield f"data: {json.dumps({'type': 'chunks', 'chunks': fake_chunks})}\n\n"
             yield f"data: {json.dumps({'type': 'token', 'token': 'Hola'})}\n\n"

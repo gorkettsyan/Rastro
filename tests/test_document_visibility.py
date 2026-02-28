@@ -7,7 +7,8 @@ import pytest_asyncio
 from httpx import AsyncClient
 
 from app.models.document import Document
-from app.services.ingestion import make_document
+from app.services.ingestion import ingestion_service
+from app.services.rag import rag_service
 from tests.conftest import auth_header
 
 
@@ -17,7 +18,7 @@ from tests.conftest import auth_header
 @pytest.mark.asyncio
 async def test_document_defaults_to_private(org_and_user):
     org, user = org_and_user
-    doc = make_document(
+    doc = ingestion_service.make_document(
         user_id=user.id,
         org_id=org.id,
         title="Test doc",
@@ -128,7 +129,7 @@ async def test_emails_visible_with_flag(
 
 @pytest.mark.asyncio
 async def test_rag_search_respects_visibility():
-    """Verify that _similarity_search in the chat API passes user_id through."""
+    """Verify that _vector_search in the chat API passes user_id through."""
     fake_chunks = [
         {
             "chunk_id": str(uuid.uuid4()),
@@ -143,7 +144,7 @@ async def test_rag_search_respects_visibility():
     ]
     mock_search = AsyncMock(return_value=fake_chunks)
 
-    with patch("app.api.chat._similarity_search", mock_search):
+    with patch.object(rag_service, "_vector_search", mock_search):
         # Verify the mock was set up — actual call validation happens via
         # the function signature requiring user_id kwarg
         test_user_id = uuid.uuid4()

@@ -3,6 +3,9 @@ import uuid
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from app.services.rag import rag_service
+from app.services.reranker import reranker_service
+
 
 # ---------------------------------------------------------------------------
 # _reciprocal_rank_fusion
@@ -22,41 +25,33 @@ def _make_chunk(cid: str, score: float = 0.9, retrieval: str = "vector") -> dict
 
 
 def test_rrf_boosts_documents_in_both_lists():
-    from app.services.rag import _reciprocal_rank_fusion
-
     id_a, id_b, id_c = str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())
     vector_results = [_make_chunk(id_a), _make_chunk(id_b, 0.8)]
     bm25_results = [_make_chunk(id_b, 0.7, "bm25"), _make_chunk(id_c, 0.5, "bm25")]
 
-    fused = _reciprocal_rank_fusion(vector_results, bm25_results)
+    fused = rag_service._reciprocal_rank_fusion(vector_results, bm25_results)
 
     # id_b appears in both lists — must rank first
     assert fused[0]["chunk_id"] == id_b
 
 
 def test_rrf_handles_empty_bm25():
-    from app.services.rag import _reciprocal_rank_fusion
-
     id_a = str(uuid.uuid4())
-    fused = _reciprocal_rank_fusion([_make_chunk(id_a)], [])
+    fused = rag_service._reciprocal_rank_fusion([_make_chunk(id_a)], [])
     assert len(fused) == 1
     assert fused[0]["chunk_id"] == id_a
 
 
 def test_rrf_handles_empty_vector():
-    from app.services.rag import _reciprocal_rank_fusion
-
     id_a = str(uuid.uuid4())
-    fused = _reciprocal_rank_fusion([], [_make_chunk(id_a, retrieval="bm25")])
+    fused = rag_service._reciprocal_rank_fusion([], [_make_chunk(id_a, retrieval="bm25")])
     assert len(fused) == 1
     assert fused[0]["chunk_id"] == id_a
 
 
 def test_rrf_attaches_rrf_score():
-    from app.services.rag import _reciprocal_rank_fusion
-
     id_a = str(uuid.uuid4())
-    fused = _reciprocal_rank_fusion([_make_chunk(id_a)], [])
+    fused = rag_service._reciprocal_rank_fusion([_make_chunk(id_a)], [])
     assert "rrf_score" in fused[0]
     assert fused[0]["rrf_score"] > 0
 
@@ -68,35 +63,29 @@ def test_rrf_attaches_rrf_score():
 @pytest.mark.asyncio
 async def test_query_rewrite_skips_long_queries():
     """Queries with >= 5 words must bypass the LLM entirely."""
-    from app.services.rag import _rewrite_query
-
     long_query = "¿Cuáles son los términos de rescisión del contrato?"
-    result = await _rewrite_query(long_query)
+    result = await rag_service._rewrite_query(long_query)
     assert result == long_query
 
 
 @pytest.mark.asyncio
 async def test_query_rewrite_short_query():
-    from app.services.rag import _rewrite_query
-
-    with patch("app.services.rag._openai") as mock_openai:
+    with patch.object(rag_service, "_openai") as mock_openai:
         mock_response = MagicMock()
         mock_response.choices = [
             MagicMock(message=MagicMock(content="rescisión cláusula contrato"))
         ]
         mock_openai.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        result = await _rewrite_query("rescisión")
+        result = await rag_service._rewrite_query("rescisión")
         assert result == "rescisión cláusula contrato"
 
 
 @pytest.mark.asyncio
 async def test_query_rewrite_fallback_on_error():
-    from app.services.rag import _rewrite_query
-
-    with patch("app.services.rag._openai") as mock_openai:
+    with patch.object(rag_service, "_openai") as mock_openai:
         mock_openai.chat.completions.create = AsyncMock(side_effect=Exception("timeout"))
-        result = await _rewrite_query("contrato")
+        result = await rag_service._rewrite_query("contrato")
         assert result == "contrato"
 
 
@@ -106,12 +95,10 @@ async def test_query_rewrite_fallback_on_error():
 
 @pytest.mark.asyncio
 async def test_reranker_fallback_without_api_key():
-    from app.services.reranker import rerank
-
     chunks = [_make_chunk(str(uuid.uuid4())) for _ in range(10)]
     with patch("app.services.reranker.settings") as mock_settings:
         mock_settings.cohere_api_key = None
-        result = await rerank("test", chunks, top_n=5)
+        result = await reranker_service.rerank("test", chunks, top_n=5)
 
     assert len(result) == 5
     assert result == chunks[:5]
@@ -119,8 +106,6 @@ async def test_reranker_fallback_without_api_key():
 
 @pytest.mark.asyncio
 async def test_reranker_reorders_by_relevance():
-    from app.services.reranker import rerank
-
     chunks = [_make_chunk(str(uuid.uuid4())) for _ in range(5)]
 
     mock_result = MagicMock()
@@ -134,7 +119,7 @@ async def test_reranker_reorders_by_relevance():
          patch("cohere.AsyncClient") as mock_cohere_cls:
         mock_settings.cohere_api_key = "test-key"
         mock_cohere_cls.return_value.rerank = AsyncMock(return_value=mock_result)
-        result = await rerank("test", chunks, top_n=3)
+        result = await reranker_service.rerank("test", chunks, top_n=3)
 
     assert len(result) == 3
     assert result[0]["chunk_id"] == chunks[2]["chunk_id"]
@@ -143,14 +128,12 @@ async def test_reranker_reorders_by_relevance():
 
 @pytest.mark.asyncio
 async def test_reranker_fallback_on_cohere_error():
-    from app.services.reranker import rerank
-
     chunks = [_make_chunk(str(uuid.uuid4())) for _ in range(5)]
     with patch("app.services.reranker.settings") as mock_settings, \
          patch("cohere.AsyncClient") as mock_cohere_cls:
         mock_settings.cohere_api_key = "test-key"
         mock_cohere_cls.return_value.rerank = AsyncMock(side_effect=Exception("api error"))
-        result = await rerank("test", chunks, top_n=3)
+        result = await reranker_service.rerank("test", chunks, top_n=3)
 
     assert len(result) == 3
     assert result == chunks[:3]
@@ -162,17 +145,15 @@ async def test_reranker_fallback_on_cohere_error():
 
 @pytest.mark.asyncio
 async def test_hybrid_search_calls_both_retrievers(db_session, org_and_user):
-    from app.services.rag import stream_rag_response
-
     org, user = org_and_user
 
-    with patch("app.services.rag._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.services.rag._vector_search", new_callable=AsyncMock, return_value=[]) as mock_v, \
-         patch("app.services.rag._bm25_search", new_callable=AsyncMock, return_value=[]) as mock_b, \
-         patch("app.services.rag._rewrite_query", new_callable=AsyncMock, return_value="query"), \
-         patch("app.services.rag.rerank", new_callable=AsyncMock, return_value=[]):
+    with patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=[]) as mock_v, \
+         patch.object(rag_service, "_bm25_search", new_callable=AsyncMock, return_value=[]) as mock_b, \
+         patch.object(rag_service, "_rewrite_query", new_callable=AsyncMock, return_value="query"), \
+         patch.object(reranker_service, "rerank", new_callable=AsyncMock, return_value=[]):
 
-        async for _ in stream_rag_response(db_session, org.id, user.id, "query"):
+        async for _ in rag_service.stream_rag_response(db_session, org.id, user.id, "query"):
             pass
 
         assert mock_v.called
@@ -181,17 +162,15 @@ async def test_hybrid_search_calls_both_retrievers(db_session, org_and_user):
 
 @pytest.mark.asyncio
 async def test_no_results_returns_graceful_message(db_session, org_and_user):
-    from app.services.rag import stream_rag_response
-
     org, user = org_and_user
 
-    with patch("app.services.rag._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.services.rag._vector_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._bm25_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._rewrite_query", new_callable=AsyncMock, return_value="q"):
+    with patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_bm25_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_rewrite_query", new_callable=AsyncMock, return_value="q"):
 
         events = []
-        async for event in stream_rag_response(db_session, org.id, user.id, "q"):
+        async for event in rag_service.stream_rag_response(db_session, org.id, user.id, "q"):
             events.append(event)
 
     parsed = [json.loads(e.replace("data: ", "").strip()) for e in events if e.strip()]
@@ -201,17 +180,15 @@ async def test_no_results_returns_graceful_message(db_session, org_and_user):
 
 @pytest.mark.asyncio
 async def test_sse_done_event_present(db_session, org_and_user):
-    from app.services.rag import stream_rag_response
-
     org, user = org_and_user
 
-    with patch("app.services.rag._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.services.rag._vector_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._bm25_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._rewrite_query", new_callable=AsyncMock, return_value="q"):
+    with patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_bm25_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_rewrite_query", new_callable=AsyncMock, return_value="q"):
 
         events = []
-        async for event in stream_rag_response(db_session, org.id, user.id, "q"):
+        async for event in rag_service.stream_rag_response(db_session, org.id, user.id, "q"):
             events.append(event)
 
     parsed = [json.loads(e.replace("data: ", "").strip()) for e in events if e.strip()]
@@ -220,8 +197,6 @@ async def test_sse_done_event_present(db_session, org_and_user):
 
 @pytest.mark.asyncio
 async def test_sources_event_present_when_results(db_session, org_and_user):
-    from app.services.rag import stream_rag_response
-
     org, user = org_and_user
     doc_id = uuid.uuid4()
     fake_chunks = [
@@ -235,17 +210,17 @@ async def test_sources_event_present_when_results(db_session, org_and_user):
     async def _fake_stream():
         yield stream_chunk
 
-    with patch("app.services.rag._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.services.rag._vector_search", new_callable=AsyncMock, return_value=fake_chunks), \
-         patch("app.services.rag._bm25_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._rewrite_query", new_callable=AsyncMock, return_value="q"), \
-         patch("app.services.rag.rerank", new_callable=AsyncMock, return_value=fake_chunks[:2]), \
-         patch("app.services.rag._openai") as mock_openai:
+    with patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=fake_chunks), \
+         patch.object(rag_service, "_bm25_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_rewrite_query", new_callable=AsyncMock, return_value="q"), \
+         patch.object(reranker_service, "rerank", new_callable=AsyncMock, return_value=fake_chunks[:2]), \
+         patch.object(rag_service, "_openai") as mock_openai:
 
         mock_openai.chat.completions.create = AsyncMock(return_value=_fake_stream())
 
         events = []
-        async for event in stream_rag_response(db_session, org.id, user.id, "q"):
+        async for event in rag_service.stream_rag_response(db_session, org.id, user.id, "q"):
             events.append(event)
 
     parsed = [json.loads(e.replace("data: ", "").strip()) for e in events if e.strip()]

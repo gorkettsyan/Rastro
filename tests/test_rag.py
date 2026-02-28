@@ -7,6 +7,9 @@ import uuid
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
+from app.services.rag import rag_service
+from app.services.reranker import reranker_service
+
 
 def _fake_stream(*tokens):
     """Returns an async generator that yields fake OpenAI stream chunks."""
@@ -38,24 +41,22 @@ def _fake_chunk(content: str = "Texto relevante") -> dict:
 
 @pytest.mark.asyncio
 async def test_stream_emits_token_events(db_session, org_and_user, project):
-    from app.services.rag import stream_rag_response
-
     org, user = org_and_user
     chunks = [_fake_chunk()]
 
-    with patch("app.services.rag._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.services.rag._vector_search", new_callable=AsyncMock, return_value=chunks), \
-         patch("app.services.rag._bm25_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._rewrite_query", new_callable=AsyncMock, return_value="q"), \
-         patch("app.services.rag.rerank", new_callable=AsyncMock, return_value=chunks), \
-         patch("app.services.rag._openai") as mock_openai:
+    with patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=chunks), \
+         patch.object(rag_service, "_bm25_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_rewrite_query", new_callable=AsyncMock, return_value="q"), \
+         patch.object(reranker_service, "rerank", new_callable=AsyncMock, return_value=chunks), \
+         patch.object(rag_service, "_openai") as mock_openai:
 
         mock_openai.chat.completions.create = AsyncMock(
             return_value=_fake_stream("La ", "respuesta")
         )
 
         events = []
-        async for raw in stream_rag_response(db_session, org.id, user.id, "¿Qué dice?", project.id):
+        async for raw in rag_service.stream_rag_response(db_session, org.id, user.id, "¿Qué dice?", project.id):
             if raw.startswith("data: "):
                 events.append(json.loads(raw[6:]))
 
@@ -69,22 +70,20 @@ async def test_stream_emits_token_events(db_session, org_and_user, project):
 
 @pytest.mark.asyncio
 async def test_stream_emits_sources_event(db_session, org_and_user):
-    from app.services.rag import stream_rag_response
-
     org, user = org_and_user
     chunks = [_fake_chunk(), _fake_chunk("Segundo fragmento")]
 
-    with patch("app.services.rag._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.services.rag._vector_search", new_callable=AsyncMock, return_value=chunks), \
-         patch("app.services.rag._bm25_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._rewrite_query", new_callable=AsyncMock, return_value="q"), \
-         patch("app.services.rag.rerank", new_callable=AsyncMock, return_value=chunks), \
-         patch("app.services.rag._openai") as mock_openai:
+    with patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=chunks), \
+         patch.object(rag_service, "_bm25_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_rewrite_query", new_callable=AsyncMock, return_value="q"), \
+         patch.object(reranker_service, "rerank", new_callable=AsyncMock, return_value=chunks), \
+         patch.object(rag_service, "_openai") as mock_openai:
 
         mock_openai.chat.completions.create = AsyncMock(return_value=_fake_stream("ok"))
 
         events = []
-        async for raw in stream_rag_response(db_session, org.id, user.id, "q"):
+        async for raw in rag_service.stream_rag_response(db_session, org.id, user.id, "q"):
             if raw.startswith("data: "):
                 events.append(json.loads(raw[6:]))
 
@@ -96,17 +95,15 @@ async def test_stream_emits_sources_event(db_session, org_and_user):
 
 @pytest.mark.asyncio
 async def test_stream_done_is_last_event(db_session, org_and_user):
-    from app.services.rag import stream_rag_response
-
     org, user = org_and_user
 
-    with patch("app.services.rag._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.services.rag._vector_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._bm25_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._rewrite_query", new_callable=AsyncMock, return_value="q"):
+    with patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_bm25_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_rewrite_query", new_callable=AsyncMock, return_value="q"):
 
         events = []
-        async for raw in stream_rag_response(db_session, org.id, user.id, "q"):
+        async for raw in rag_service.stream_rag_response(db_session, org.id, user.id, "q"):
             if raw.startswith("data: "):
                 events.append(json.loads(raw[6:]))
 
@@ -121,21 +118,20 @@ async def test_stream_done_is_last_event(db_session, org_and_user):
 async def test_stream_creates_search_log(db_session, org_and_user, project):
     from sqlalchemy import select
     from app.models.search_log import SearchLog
-    from app.services.rag import stream_rag_response
 
     org, user = org_and_user
     chunks = [_fake_chunk()]
 
-    with patch("app.services.rag._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.services.rag._vector_search", new_callable=AsyncMock, return_value=chunks), \
-         patch("app.services.rag._bm25_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._rewrite_query", new_callable=AsyncMock, return_value="q"), \
-         patch("app.services.rag.rerank", new_callable=AsyncMock, return_value=chunks), \
-         patch("app.services.rag._openai") as mock_openai:
+    with patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=chunks), \
+         patch.object(rag_service, "_bm25_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_rewrite_query", new_callable=AsyncMock, return_value="q"), \
+         patch.object(reranker_service, "rerank", new_callable=AsyncMock, return_value=chunks), \
+         patch.object(rag_service, "_openai") as mock_openai:
 
         mock_openai.chat.completions.create = AsyncMock(return_value=_fake_stream("ok"))
 
-        async for _ in stream_rag_response(db_session, org.id, user.id, "pregunta de prueba"):
+        async for _ in rag_service.stream_rag_response(db_session, org.id, user.id, "pregunta de prueba"):
             pass
 
     result = await db_session.execute(
@@ -152,16 +148,15 @@ async def test_stream_creates_search_log(db_session, org_and_user, project):
 async def test_stream_log_zero_results_when_no_chunks(db_session, org_and_user):
     from sqlalchemy import select
     from app.models.search_log import SearchLog
-    from app.services.rag import stream_rag_response
 
     org, user = org_and_user
 
-    with patch("app.services.rag._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.services.rag._vector_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._bm25_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.services.rag._rewrite_query", new_callable=AsyncMock, return_value="q"):
+    with patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_bm25_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(rag_service, "_rewrite_query", new_callable=AsyncMock, return_value="q"):
 
-        async for _ in stream_rag_response(db_session, org.id, user.id, "pregunta vacía"):
+        async for _ in rag_service.stream_rag_response(db_session, org.id, user.id, "pregunta vacía"):
             pass
 
     result = await db_session.execute(

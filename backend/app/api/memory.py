@@ -8,7 +8,7 @@ from app.dependencies import get_current_user
 from app.models.memory import Memory
 from app.models.user import User
 from app.schemas.memory import MemoryCreate, MemoryList, MemoryOut, MemoryUpdate
-from app.services.embeddings import embed_texts
+from app.services.embeddings import embedding_service
 
 router = APIRouter(prefix="/memory", tags=["memory"])
 
@@ -33,7 +33,7 @@ async def create_memory(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    embeddings = await embed_texts([body.content])
+    embeddings = await embedding_service.embed_texts([body.content])
     memory = Memory(
         user_id=current_user.id,
         org_id=current_user.org_id,
@@ -60,7 +60,7 @@ async def update_memory(
     if not memory:
         raise HTTPException(status_code=404, detail="Memory not found")
 
-    embeddings = await embed_texts([body.content])
+    embeddings = await embedding_service.embed_texts([body.content])
     memory.content = body.content
     memory.embedding = embeddings[0]
     await db.flush()

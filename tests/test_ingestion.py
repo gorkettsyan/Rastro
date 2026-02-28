@@ -2,19 +2,20 @@ import pytest
 import uuid
 from unittest.mock import AsyncMock, patch
 
+from app.services.ingestion import ingestion_service
+from app.services.embeddings import embedding_service
+
 
 @pytest.mark.asyncio
 async def test_extract_plaintext():
-    from app.services.ingestion import extract_text_from_bytes
-    text = extract_text_from_bytes("Hola mundo".encode(), "text/plain")
+    text = ingestion_service.extract_text_from_bytes("Hola mundo".encode(), "text/plain")
     assert "Hola mundo" in text
 
 
 @pytest.mark.asyncio
 async def test_extract_pdf_no_crash():
-    from app.services.ingestion import extract_text_from_bytes
     pdf = b"%PDF-1.4\n1 0 obj\n<</Type/Catalog>>\nendobj\nxref\n0 2\ntrailer\n<<>>\n%%EOF"
-    result = extract_text_from_bytes(pdf, "application/pdf")
+    result = ingestion_service.extract_text_from_bytes(pdf, "application/pdf")
     assert isinstance(result, str)
 
 
@@ -24,7 +25,6 @@ async def test_chunk_and_embed_creates_chunks(db_session):
     from app.models.user import User
     from app.models.document import Document
     from app.models.chunk import Chunk
-    from app.services.ingestion import chunk_and_embed
     from sqlalchemy import select
 
     org = Organization(name="Org", slug=f"org-{uuid.uuid4().hex[:6]}")
@@ -40,8 +40,8 @@ async def test_chunk_and_embed_creates_chunks(db_session):
 
     raw_text = "Esta es una cláusula de contrato muy importante. " * 30
 
-    with patch("app.services.ingestion.embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
-        count = await chunk_and_embed(db_session, doc, raw_text)
+    with patch.object(embedding_service, "embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
+        count = await ingestion_service.chunk_and_embed(db_session, doc, raw_text)
 
     assert count >= 1
     assert doc.indexing_status == "done"
@@ -54,7 +54,6 @@ async def test_chunk_and_embed_skips_short_text(db_session):
     from app.models.organization import Organization
     from app.models.user import User
     from app.models.document import Document
-    from app.services.ingestion import chunk_and_embed
 
     org = Organization(name="Org2", slug=f"org2-{uuid.uuid4().hex[:6]}")
     db_session.add(org)
@@ -67,7 +66,7 @@ async def test_chunk_and_embed_skips_short_text(db_session):
     db_session.add(doc)
     await db_session.flush()
 
-    count = await chunk_and_embed(db_session, doc, "too short")
+    count = await ingestion_service.chunk_and_embed(db_session, doc, "too short")
     assert count == 0
 
 
@@ -77,7 +76,6 @@ async def test_chunk_and_embed_is_idempotent(db_session):
     from app.models.user import User
     from app.models.document import Document
     from app.models.chunk import Chunk
-    from app.services.ingestion import chunk_and_embed
     from sqlalchemy import select
 
     org = Organization(name="Org3", slug=f"org3-{uuid.uuid4().hex[:6]}")
@@ -93,9 +91,9 @@ async def test_chunk_and_embed_is_idempotent(db_session):
 
     text = "Contenido del documento para pruebas de idempotencia. " * 30
 
-    with patch("app.services.ingestion.embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
-        count1 = await chunk_and_embed(db_session, doc, text)
-        count2 = await chunk_and_embed(db_session, doc, text)
+    with patch.object(embedding_service, "embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
+        count1 = await ingestion_service.chunk_and_embed(db_session, doc, text)
+        count2 = await ingestion_service.chunk_and_embed(db_session, doc, text)
 
     result = await db_session.execute(select(Chunk).where(Chunk.document_id == doc.id))
     assert len(result.scalars().all()) == count2

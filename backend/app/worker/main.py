@@ -5,7 +5,7 @@ import signal
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from app.config import settings
-from app.worker.queue import poll, delete_message
+from app.worker.queue import queue_service
 from app.worker.handlers.upload import handle_manual_upload
 from app.worker.handlers.drive import handle_drive_file
 from app.worker.handlers.gmail import handle_gmail_thread
@@ -43,7 +43,7 @@ async def process(msg: dict) -> None:
     handler = HANDLERS.get(body.get("job_type"))
     if not handler:
         log.warning(f"Unknown job_type: {body.get('job_type')}")
-        delete_message(receipt)
+        queue_service.delete_message(receipt)
         return
 
     async with SessionLocal() as db:
@@ -51,7 +51,7 @@ async def process(msg: dict) -> None:
             log.info(f"Processing {body['job_type']} document_id={body.get('document_id')}")
             await handler(body, db)
             await db.commit()
-            delete_message(receipt)
+            queue_service.delete_message(receipt)
             log.info(f"Done: {body['job_type']} document_id={body.get('document_id')}")
         except Exception as e:
             await db.rollback()
@@ -62,7 +62,7 @@ async def process(msg: dict) -> None:
 async def run():
     log.info("Worker started, polling SQS...")
     while _running:
-        for msg in poll(wait_seconds=20):
+        for msg in queue_service.poll(wait_seconds=20):
             await process(msg)
     log.info("Worker stopped.")
 

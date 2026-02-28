@@ -22,9 +22,9 @@ from app.schemas.chat import (
     ConversationOut,
     MessageOut,
 )
-from app.services.memory_extractor import get_memories_for_prompt
-from app.services.rag import _build_context, _embed_query, _vector_search as _similarity_search
-from app.worker.queue import enqueue
+from app.services.memory_extractor import memory_extractor_service
+from app.services.rag import rag_service
+from app.worker.queue import queue_service
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 _openai = AsyncOpenAI(api_key=settings.openai_api_key)
@@ -164,15 +164,15 @@ async def send_message(
             if last_assistant:
                 retrieval_query = f"{last_assistant.content[:200]} {body.message}"
 
-        query_vector = await _embed_query(retrieval_query)
-        chunks = await _similarity_search(
+        query_vector = await rag_service._embed_query(retrieval_query)
+        chunks = await rag_service._vector_search(
             db, current_user.org_id, query_vector, conv.project_id,
             user_id=current_user.id,
         )
-        context = _build_context(chunks)
+        context = rag_service._build_context(chunks)
 
         # 4. Fetch memories
-        memory_block = await get_memories_for_prompt(db, current_user.id, current_query=body.message)
+        memory_block = await memory_extractor_service.get_memories_for_prompt(db, current_user.id, current_query=body.message)
 
         # 5. Build messages array for GPT-4o
         system_content = _make_chat_system_prompt(body.language) + memory_block
@@ -230,13 +230,13 @@ async def send_message(
         await db.commit()
 
         # 10. Enqueue memory extraction and message embedding
-        enqueue({
+        queue_service.enqueue({
             "job_type": "extract_memories",
             "user_id": str(current_user.id),
             "org_id": str(current_user.org_id),
             "conversation_id": str(conversation_id),
         })
-        enqueue({
+        queue_service.enqueue({
             "job_type": "embed_message",
             "message_id": str(assistant_msg.id),
         })

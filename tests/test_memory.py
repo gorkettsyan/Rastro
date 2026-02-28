@@ -2,6 +2,9 @@ import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 from httpx import AsyncClient
 
+from app.services.embeddings import embedding_service
+from app.services.memory_extractor import memory_extractor_service
+
 
 @pytest.mark.asyncio
 async def test_list_memories_empty(client: AsyncClient, auth_headers):
@@ -12,7 +15,7 @@ async def test_list_memories_empty(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_create_memory_manual(client: AsyncClient, auth_headers):
-    with patch("app.api.memory.embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
+    with patch.object(embedding_service, "embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
         resp = await client.post(
             "/api/v1/memory",
             json={"content": "Prefiero respuestas en español"},
@@ -25,7 +28,7 @@ async def test_create_memory_manual(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_update_memory(client: AsyncClient, auth_headers):
-    with patch("app.api.memory.embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
+    with patch.object(embedding_service, "embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
         create_resp = await client.post(
             "/api/v1/memory",
             json={"content": "Original"},
@@ -44,7 +47,7 @@ async def test_update_memory(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_delete_memory(client: AsyncClient, auth_headers):
-    with patch("app.api.memory.embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
+    with patch.object(embedding_service, "embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
         create_resp = await client.post(
             "/api/v1/memory",
             json={"content": "To delete"},
@@ -61,7 +64,7 @@ async def test_delete_memory(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_delete_all_memories(client: AsyncClient, auth_headers):
-    with patch("app.api.memory.embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
+    with patch.object(embedding_service, "embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
         for i in range(3):
             await client.post("/api/v1/memory", json={"content": f"Memory {i}"}, headers=auth_headers)
 
@@ -93,7 +96,7 @@ async def test_memories_isolated_per_user(client: AsyncClient, db_session, org_a
 
 @pytest.mark.asyncio
 async def test_memory_extraction_deduplicates(db_session, org_and_user):
-    from app.services.memory_extractor import extract_and_store_memories
+    from app.services.memory_extractor import memory_extractor_service
     from app.models.memory import Memory
     from app.models.conversation import Conversation
     from app.models.message import Message
@@ -113,12 +116,12 @@ async def test_memory_extraction_deduplicates(db_session, org_and_user):
         message=MagicMock(content='{"memories": ["Trabaja en derecho mercantil"]}')
     )]
 
-    with patch("app.services.memory_extractor._openai") as mock_openai, \
-         patch("app.services.memory_extractor.embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
+    with patch.object(memory_extractor_service, "_openai") as mock_openai, \
+         patch.object(memory_extractor_service._embedding_svc, "embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
         mock_openai.chat.completions.create = AsyncMock(return_value=mock_response)
 
-        count1 = await extract_and_store_memories(db_session, user.id, org.id, conv.id)
-        count2 = await extract_and_store_memories(db_session, user.id, org.id, conv.id)
+        count1 = await memory_extractor_service.extract_and_store_memories(db_session, user.id, org.id, conv.id)
+        count2 = await memory_extractor_service.extract_and_store_memories(db_session, user.id, org.id, conv.id)
 
     result = await db_session.execute(select(Memory).where(Memory.user_id == user.id))
     total = len(result.scalars().all())

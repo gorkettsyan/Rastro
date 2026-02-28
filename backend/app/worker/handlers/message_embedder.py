@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models.message import Message
-from app.services.embeddings import embed_texts
+from app.services.embeddings import embedding_service
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +37,6 @@ async def handle_embed_message(body: dict, db: AsyncSession) -> None:
         f"Q: {user_msg.content}\nA: {msg.content}" if user_msg else msg.content
     )
 
-    embeddings = await embed_texts([text_to_embed])
+    embeddings = await embedding_service.embed_texts([text_to_embed])
     msg.embedding = embeddings[0]
     log.info(f"Embedded message {message_id} as {'Q&A pair' if user_msg else 'answer only'}")

@@ -8,7 +8,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
 from app.models.search_log import SearchLog
-from app.services.rag import stream_rag_response
+from app.services.rag import rag_service
 
 router = APIRouter(prefix="/search", tags=["search"])
 
@@ -23,7 +23,7 @@ async def search_stream(
 ):
     """SSE endpoint — streams: token events, sources event, done event."""
     async def generate():
-        async for event in stream_rag_response(db, user.org_id, user.id, q, project_id, language=lang):
+        async for event in rag_service.stream_rag_response(db, user.org_id, user.id, q, project_id, language=lang):
             yield event
 
     return StreamingResponse(

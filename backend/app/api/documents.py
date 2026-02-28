@@ -11,9 +11,9 @@ from app.models.document import Document
 from app.models.project_member import ProjectMember
 from app.models.user import User
 from app.schemas.document import DocumentOut, DocumentList, DocumentUpdate
-from app.services.storage import upload_text
-from app.services.ingestion import extract_text_from_bytes, make_document
-from app.worker.queue import enqueue
+from app.services.storage import storage_service
+from app.services.ingestion import ingestion_service
+from app.worker.queue import queue_service
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -76,12 +76,12 @@ async def upload_document(
 
     content = await file.read()
     content_hash = hashlib.sha256(content).hexdigest()
-    raw_text = extract_text_from_bytes(content, file.content_type)
+    raw_text = ingestion_service.extract_text_from_bytes(content, file.content_type)
 
     s3_key = f"{current_user.org_id}/upload/{content_hash}.txt"
-    upload_text(s3_key, raw_text)
+    storage_service.upload_text(s3_key, raw_text)
 
-    doc = make_document(
+    doc = ingestion_service.make_document(
         user_id=current_user.id,
         org_id=current_user.org_id,
         project_id=project_id,
@@ -97,7 +97,7 @@ async def upload_document(
     await db.commit()
     await db.refresh(doc)
 
-    enqueue({
+    queue_service.enqueue({
         "job_type": "manual_upload",
         "org_id": str(current_user.org_id),
         "user_id": str(current_user.id),

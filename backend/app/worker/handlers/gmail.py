@@ -7,9 +7,9 @@ from sqlalchemy import select
 from app.models.document import Document
 from app.models.integration_token import IntegrationToken
 from app.security import decrypt
-from app.services.ingestion import chunk_and_embed, make_document
-from app.services.storage import upload_text
-from app.worker.queue import enqueue
+from app.services.ingestion import ingestion_service
+from app.services.storage import storage_service
+from app.worker.queue import queue_service
 
 
 def _gmail_service(access_token: str):
@@ -129,11 +129,11 @@ async def handle_gmail_thread(body: dict, db: AsyncSession) -> None:
             return
 
         s3_key = f"{doc.org_id}/gmail/{body['source_id']}.txt"
-        upload_text(s3_key, raw_text)
+        storage_service.upload_text(s3_key, raw_text)
         doc.file_path = s3_key
         doc.title = subject
 
-        await chunk_and_embed(db, doc, raw_text, extra_metadata={"source": "gmail", "thread_id": body["source_id"]})
+        await ingestion_service.chunk_and_embed(db, doc, raw_text, extra_metadata={"source": "gmail", "thread_id": body["source_id"]})
     except Exception as e:
         doc.indexing_status = "error"
         doc.indexing_error = str(e)[:500]
@@ -168,7 +168,7 @@ async def enqueue_all_gmail_threads(org_id: str, user_id: str, db: AsyncSession)
         )
         doc = existing.scalar_one_or_none()
         if not doc:
-            doc = make_document(
+            doc = ingestion_service.make_document(
                 user_id=uuid.UUID(user_id),
                 id=uuid.uuid4(),
                 org_id=org_id,
@@ -191,5 +191,5 @@ async def enqueue_all_gmail_threads(org_id: str, user_id: str, db: AsyncSession)
     # Pass 2: commit all rows to DB, then enqueue (worker needs rows to exist)
     await db.commit()
     for job in jobs:
-        enqueue(job)
+        queue_service.enqueue(job)
     return len(jobs)

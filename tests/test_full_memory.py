@@ -3,6 +3,11 @@ import uuid
 from unittest.mock import patch, AsyncMock, MagicMock
 from httpx import AsyncClient
 
+from app.services.embeddings import embedding_service
+from app.services.memory_extractor import memory_extractor_service
+from app.services.rag import rag_service
+from app.worker.queue import queue_service
+
 
 @pytest.mark.asyncio
 async def test_embed_message_handler_embeds_new_message(db_session, org_and_user):
@@ -20,7 +25,7 @@ async def test_embed_message_handler_embeds_new_message(db_session, org_and_user
     db_session.add(msg)
     await db_session.flush()
 
-    with patch("app.worker.handlers.message_embedder.embed_texts", new_callable=AsyncMock, return_value=[[0.5] * 1536]):
+    with patch.object(embedding_service, "embed_texts", new_callable=AsyncMock, return_value=[[0.5] * 1536]):
         await handle_embed_message({"message_id": str(msg.id)}, db_session)
 
     result = await db_session.execute(select(Message).where(Message.id == msg.id))
@@ -49,7 +54,7 @@ async def test_embed_message_handler_skips_already_embedded(db_session, org_and_
     db_session.add(msg)
     await db_session.flush()
 
-    with patch("app.worker.handlers.message_embedder.embed_texts", new_callable=AsyncMock) as mock_embed:
+    with patch.object(embedding_service, "embed_texts", new_callable=AsyncMock) as mock_embed:
         await handle_embed_message({"message_id": str(msg.id)}, db_session)
         mock_embed.assert_not_called()
 
@@ -78,7 +83,7 @@ async def test_embed_message_handler_embeds_qa_pair(db_session, org_and_user):
         captured.extend(texts)
         return [[0.5] * 1536]
 
-    with patch("app.worker.handlers.message_embedder.embed_texts", side_effect=mock_embed):
+    with patch.object(embedding_service, "embed_texts", side_effect=mock_embed):
         await handle_embed_message({"message_id": str(asst_msg.id)}, db_session)
 
     assert len(captured) == 1
@@ -96,23 +101,20 @@ async def test_embed_message_handler_skips_missing_message(db_session):
 
 @pytest.mark.asyncio
 async def test_get_memories_returns_empty_string_when_no_data(db_session, org_and_user):
-    from app.services.memory_extractor import get_memories_for_prompt
-
     _, user = org_and_user
-    result = await get_memories_for_prompt(db_session, user.id)
+    result = await memory_extractor_service.get_memories_for_prompt(db_session, user.id)
     assert result == ""
 
 
 @pytest.mark.asyncio
 async def test_get_memories_returns_extracted_facts(db_session, org_and_user):
-    from app.services.memory_extractor import get_memories_for_prompt
     from app.models.memory import Memory
 
     org, user = org_and_user
     db_session.add(Memory(user_id=user.id, org_id=org.id, content="Expert in tax law", source="manual"))
     await db_session.flush()
 
-    result = await get_memories_for_prompt(db_session, user.id)
+    result = await memory_extractor_service.get_memories_for_prompt(db_session, user.id)
     assert "Expert in tax law" in result
     assert "What I remember about this user" in result
 
@@ -120,15 +122,14 @@ async def test_get_memories_returns_extracted_facts(db_session, org_and_user):
 @pytest.mark.asyncio
 async def test_get_memories_past_exchanges_sqlite_fallback(db_session, org_and_user):
     """In SQLite, pgvector query fails gracefully — only Part 1 returned."""
-    from app.services.memory_extractor import get_memories_for_prompt
     from app.models.memory import Memory
 
     org, user = org_and_user
     db_session.add(Memory(user_id=user.id, org_id=org.id, content="Works in law", source="manual"))
     await db_session.flush()
 
-    with patch("app.services.memory_extractor.embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
-        result = await get_memories_for_prompt(db_session, user.id, current_query="legal documents")
+    with patch.object(embedding_service, "embed_texts", new_callable=AsyncMock, return_value=[[0.1] * 1536]):
+        result = await memory_extractor_service.get_memories_for_prompt(db_session, user.id, current_query="legal documents")
 
     # Part 1 is present, no exception raised
     assert "Works in law" in result
@@ -155,10 +156,10 @@ async def test_chat_enqueues_embed_message(client: AsyncClient, auth_headers, db
 
     enqueued = []
     with patch("app.api.chat._openai") as mock_openai, \
-         patch("app.api.chat._embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
-         patch("app.api.chat._similarity_search", new_callable=AsyncMock, return_value=[]), \
-         patch("app.api.chat.get_memories_for_prompt", new_callable=AsyncMock, return_value=""), \
-         patch("app.api.chat.enqueue", side_effect=lambda x: enqueued.append(x)):
+         patch.object(rag_service, "_embed_query", new_callable=AsyncMock, return_value=[0.1] * 1536), \
+         patch.object(rag_service, "_vector_search", new_callable=AsyncMock, return_value=[]), \
+         patch.object(memory_extractor_service, "get_memories_for_prompt", new_callable=AsyncMock, return_value=""), \
+         patch.object(queue_service, "enqueue", side_effect=lambda x: enqueued.append(x)):
         mock_openai.chat.completions.create = AsyncMock(return_value=mock_stream)
 
         resp = await client.post(

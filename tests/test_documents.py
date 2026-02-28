@@ -3,11 +3,14 @@ import pytest
 from unittest.mock import patch
 from httpx import AsyncClient
 
+from app.services.storage import storage_service
+from app.worker.queue import queue_service
+
 
 @pytest.mark.asyncio
 async def test_upload_pdf(client: AsyncClient, auth_headers):
     pdf = b"%PDF-1.4\n1 0 obj\n<</Type /Catalog>>\nendobj\nxref\n0 2\ntrailer\n<<>>\n%%EOF"
-    with patch("app.api.documents.upload_text"), patch("app.api.documents.enqueue"):
+    with patch.object(storage_service, "upload_text"), patch.object(queue_service, "enqueue"):
         resp = await client.post(
             "/api/v1/documents/upload",
             files={"file": ("test.pdf", io.BytesIO(pdf), "application/pdf")},
@@ -21,7 +24,7 @@ async def test_upload_pdf(client: AsyncClient, auth_headers):
 @pytest.mark.asyncio
 async def test_upload_to_project(client: AsyncClient, auth_headers, project):
     pdf = b"%PDF-1.4\n%%EOF"
-    with patch("app.api.documents.upload_text"), patch("app.api.documents.enqueue"):
+    with patch.object(storage_service, "upload_text"), patch.object(queue_service, "enqueue"):
         resp = await client.post(
             "/api/v1/documents/upload",
             files={"file": ("doc.pdf", io.BytesIO(pdf), "application/pdf")},
@@ -34,7 +37,7 @@ async def test_upload_to_project(client: AsyncClient, auth_headers, project):
 
 @pytest.mark.asyncio
 async def test_upload_unsupported_type(client: AsyncClient, auth_headers):
-    with patch("app.api.documents.upload_text"), patch("app.api.documents.enqueue"):
+    with patch.object(storage_service, "upload_text"), patch.object(queue_service, "enqueue"):
         resp = await client.post(
             "/api/v1/documents/upload",
             files={"file": ("bad.exe", io.BytesIO(b"bin"), "application/octet-stream")},
@@ -53,7 +56,7 @@ async def test_list_documents_empty(client: AsyncClient, auth_headers):
 @pytest.mark.asyncio
 async def test_list_documents_filtered_by_project(client: AsyncClient, auth_headers, project):
     pdf = b"%PDF-1.4\n%%EOF"
-    with patch("app.api.documents.upload_text"), patch("app.api.documents.enqueue"):
+    with patch.object(storage_service, "upload_text"), patch.object(queue_service, "enqueue"):
         await client.post(
             "/api/v1/documents/upload",
             files={"file": ("a.pdf", io.BytesIO(pdf), "application/pdf")},

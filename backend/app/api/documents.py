@@ -65,7 +65,8 @@ async def upload_document(
         indexing_status="pending",
     )
     db.add(doc)
-    await db.flush()
+    await db.commit()
+    await db.refresh(doc)
 
     enqueue({
         "job_type": "manual_upload",

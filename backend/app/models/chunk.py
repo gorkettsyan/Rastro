@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Text, Integer, func
+from sqlalchemy import DateTime, ForeignKey, Text, Integer, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from pgvector.sqlalchemy import Vector
 from app.database import Base
 
@@ -23,5 +23,5 @@ class Chunk(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[list | None] = mapped_column(Vector(1536), nullable=True)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    metadata_: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+    metadata_: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

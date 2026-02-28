@@ -116,11 +116,11 @@ export default function Project() {
             </label>
           </div>
 
-          {documents.length === 0 ? (
+          {documents.filter((doc) => doc.source !== "gmail").length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-8">{t("upload_document")}</p>
           ) : (
             <div className="divide-y divide-gray-100">
-              {documents.map((doc) => (
+              {documents.filter((doc) => doc.source !== "gmail").map((doc) => (
                 <div key={doc.id} className="py-3 flex items-center justify-between">
                   <p className="text-sm text-gray-800">{doc.title}</p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${

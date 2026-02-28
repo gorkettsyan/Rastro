@@ -24,9 +24,12 @@ class Settings(BaseSettings):
     sqs_ingest_dlq_url: str | None = None
     s3_endpoint_url: str | None = None
     s3_bucket: str = "rastro-documents"
+    # PRD 4
+    cohere_api_key: str | None = None
 
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 
 settings = Settings()

@@ -73,8 +73,9 @@ async def enqueue_all_drive_files(org_id: str, user_id: str, db: AsyncSession) -
     service = _drive_service(decrypt(token.access_token_enc))
     mime_query = " or ".join(f"mimeType='{m}'" for m in SUPPORTED_MIME_TYPES)
     page_token = None
-    count = 0
+    jobs: list[dict] = []
 
+    # Pass 1: create Document rows, collect job payloads
     while True:
         resp = service.files().list(
             q=f"({mime_query}) and trashed=false",
@@ -106,18 +107,20 @@ async def enqueue_all_drive_files(org_id: str, user_id: str, db: AsyncSession) -
                 db.add(doc)
                 await db.flush()
 
-            enqueue({
+            jobs.append({
                 "job_type": "drive_file",
                 "org_id": str(org_id),
                 "user_id": str(user_id),
                 "document_id": str(doc.id),
                 "source_id": file["id"],
             })
-            count += 1
 
         page_token = resp.get("nextPageToken")
         if not page_token:
             break
 
-    await db.flush()
-    return count
+    # Pass 2: commit all rows to DB, then enqueue (worker needs rows to exist)
+    await db.commit()
+    for job in jobs:
+        enqueue(job)
+    return len(jobs)

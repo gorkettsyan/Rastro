@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Text, Integer, func
+from sqlalchemy import DateTime, ForeignKey, Text, Integer, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from app.database import Base
 
 
@@ -21,5 +21,6 @@ class SearchLog(Base):
     )
     query: Mapped[str] = mapped_column(Text, nullable=False)
     result_count: Mapped[int] = mapped_column(Integer, default=0)
-    cited_chunk_ids: Mapped[list] = mapped_column(JSONB, default=list)
+    cited_chunk_ids: Mapped[list] = mapped_column(JSON, default=list)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

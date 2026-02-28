@@ -39,5 +39,10 @@
   "no_results": "No se encontraron documentos relevantes.",
   "sources": "Fuentes",
   "search_history": "Búsquedas recientes",
+  "all_documents": "Todos los documentos",
+  "no_documents": "Aún no hay documentos",
+  "source_drive": "Drive",
+  "source_gmail": "Gmail",
+  "source_upload": "Subida",
   "loading": "Cargando..."
 }

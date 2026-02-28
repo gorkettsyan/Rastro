@@ -7,6 +7,7 @@ import LanguageSwitcher from "../components/LanguageSwitcher";
 import SearchBar from "../components/SearchBar";
 import SearchResult from "../components/SearchResult";
 import { CitedChunk } from "../components/CitationCard";
+import IntegrationsPanel from "../components/IntegrationsPanel";
 
 interface Project {
   id: string;
@@ -16,6 +17,14 @@ interface Project {
   updated_at: string;
 }
 
+interface Document {
+  id: string;
+  title: string;
+  source: string;
+  indexing_status: string;
+  project_id: string | null;
+}
+
 interface SearchState {
   query: string;
   answer: string;
@@ -23,11 +32,18 @@ interface SearchState {
   streaming: boolean;
 }
 
+const SOURCE_LABEL: Record<string, string> = {
+  drive: "source_drive",
+  gmail: "source_gmail",
+  upload: "source_upload",
+};
+
 export default function Dashboard() {
   const { user, setUser, logout } = useAuthStore();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchState, setSearchState] = useState<SearchState | null>(null);
 
@@ -38,8 +54,12 @@ export default function Dashboard() {
           const { data } = await api.get("/auth/me");
           setUser(data);
         }
-        const { data } = await api.get("/projects");
-        setProjects(data.items);
+        const [projectsRes, docsRes] = await Promise.all([
+          api.get("/projects"),
+          api.get("/documents"),
+        ]);
+        setProjects(projectsRes.data.items);
+        setDocuments(docsRes.data.items);
       } catch {
         navigate("/login");
       } finally {
@@ -68,9 +88,7 @@ export default function Dashboard() {
       <main className="max-w-4xl mx-auto px-6 py-10">
         {/* Global search */}
         <div className="mb-8">
-          <SearchBar
-            onResult={(state) => setSearchState(state)}
-          />
+          <SearchBar onResult={(state) => setSearchState(state)} />
           {searchState && (
             <SearchResult
               query={searchState.query}
@@ -81,6 +99,9 @@ export default function Dashboard() {
           )}
         </div>
 
+        <IntegrationsPanel />
+
+        {/* Projects */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900">{t("projects")}</h2>
           <Link
@@ -113,6 +134,50 @@ export default function Dashboard() {
                 <span className="text-xs text-gray-400 capitalize">{t(`status_${p.status}`)}</span>
               </Link>
             ))}
+          </div>
+        )}
+
+        {/* All documents */}
+        {!loading && (
+          <div className="mt-10">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">{t("all_documents")}</h2>
+
+            {documents.filter((doc) => doc.source !== "gmail").length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                <p className="text-gray-400 text-sm">{t("no_documents")}</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
+                {documents.filter((doc) => doc.source !== "gmail").map((doc) => (
+                  <div key={doc.id} className="px-5 py-3 flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="text-sm text-gray-800 truncate">{doc.title}</p>
+                      {doc.project_id && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {projects.find((p) => p.id === doc.project_id)?.title ?? doc.project_id}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 ml-4 shrink-0">
+                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        {t(SOURCE_LABEL[doc.source] ?? doc.source)}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        doc.indexing_status === "done"
+                          ? "bg-green-50 text-green-700"
+                          : doc.indexing_status === "error"
+                          ? "bg-red-50 text-red-700"
+                          : "bg-yellow-50 text-yellow-700"
+                      }`}>
+                        {t(doc.indexing_status === "done" ? "indexed"
+                          : doc.indexing_status === "error" ? "error"
+                          : "indexing")}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>

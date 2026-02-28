@@ -1,11 +1,12 @@
 import { useTranslation } from "react-i18next";
 
 export interface CitedChunk {
-  chunk_id: string;
   document_id: string;
-  document_title: string;
-  content: string;
+  title: string;
+  source: string;
+  source_url: string | null;
   score: number;
+  excerpt: string;
 }
 
 interface Props {
@@ -23,18 +24,18 @@ export default function CitationCard({ chunks }: Props) {
         {t("sources")}
       </p>
       <div className="flex flex-col gap-2">
-        {chunks.map((chunk) => (
+        {chunks.map((chunk, i) => (
           <div
-            key={chunk.chunk_id}
+            key={chunk.document_id + i}
             className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"
           >
             <p className="text-xs font-medium text-gray-700 mb-1 truncate">
-              {chunk.document_title}
+              {chunk.title}
               <span className="ml-2 text-gray-400 font-normal">
                 {(chunk.score * 100).toFixed(0)}%
               </span>
             </p>
-            <p className="text-xs text-gray-500 line-clamp-2">{chunk.content}</p>
+            <p className="text-xs text-gray-500 line-clamp-2">{chunk.excerpt}</p>
           </div>
         ))}
       </div>

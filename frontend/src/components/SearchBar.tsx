@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function SearchBar({ projectId, onResult }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
@@ -32,8 +32,7 @@ export default function SearchBar({ projectId, onResult }: Props) {
 
     const token = localStorage.getItem("rastro_token");
     const base = import.meta.env.VITE_API_URL ?? "";
-    const lang = i18n.language.slice(0, 2);  // "es", "en", etc.
-    const params = new URLSearchParams({ q: trimmed, lang });
+    const params = new URLSearchParams({ q: trimmed });
     if (projectId) params.set("project_id", projectId);
 
     try {
@@ -65,11 +64,11 @@ export default function SearchBar({ projectId, onResult }: Props) {
           if (!line.startsWith("data: ")) continue;
           try {
             const event = JSON.parse(line.slice(6));
-            if (event.type === "chunks") {
-              chunks = event.chunks;
+            if (event.type === "token") {
+              answer += event.content;
               onResult({ query: trimmed, answer, chunks, streaming: true });
-            } else if (event.type === "token") {
-              answer += event.token;
+            } else if (event.type === "sources") {
+              chunks = event.sources;
               onResult({ query: trimmed, answer, chunks, streaming: true });
             } else if (event.type === "done") {
               onResult({ query: trimmed, answer, chunks, streaming: false });

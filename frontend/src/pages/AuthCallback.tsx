@@ -28,8 +28,8 @@ export default function AuthCallback() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <p className="text-gray-500 text-sm">Iniciando sesión...</p>
+    <div className="r-login-page">
+      <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>Iniciando sesión...</p>
     </div>
   );
 }

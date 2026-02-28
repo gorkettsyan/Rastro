@@ -8,6 +8,7 @@ import NewProject from "./pages/NewProject";
 import Project from "./pages/Project";
 import Chat from "./pages/Chat";
 import MemoryPage from "./pages/Memory";
+import Integrations from "./pages/Integrations";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/chat/:conversationId" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/memory" element={<PrivateRoute><MemoryPage /></PrivateRoute>} />
+          <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

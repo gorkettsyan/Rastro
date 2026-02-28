@@ -10,10 +10,7 @@ export default function LanguageSwitcher() {
   };
 
   return (
-    <button
-      onClick={toggle}
-      className="text-xs font-medium text-gray-400 hover:text-gray-600 border border-gray-200 rounded px-2 py-1 transition-colors"
-    >
+    <button onClick={toggle} className="r-lang-btn">
       {i18n.language === "es" ? "EN" : "ES"}
     </button>
   );

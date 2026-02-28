@@ -23,20 +23,14 @@ export default function MessageBubble({ role, content, sources = [], streaming }
   const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
 
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
-      <div className={`max-w-2xl ${isUser ? "order-2" : "order-1"}`}>
-        <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
-          isUser
-            ? "bg-gray-900 text-white rounded-br-sm"
-            : "bg-white border border-gray-200 text-gray-800 rounded-bl-sm"
-        }`}>
+    <div className={`r-msg-row ${isUser ? "user" : "assistant"}`}>
+      <div>
+        <div className={`r-msg-bubble ${isUser ? "user" : "assistant"}`}>
           {content}
-          {streaming && (
-            <span className="inline-block w-1.5 h-4 bg-gray-400 animate-pulse ml-0.5 rounded-sm" />
-          )}
+          {streaming && <span className="r-cursor" />}
         </div>
         {!isUser && sources.length > 0 && !streaming && (
-          <div className="mt-2 grid gap-1.5">
+          <div style={{ marginTop: "8px", display: "grid", gap: "6px" }}>
             {sources.map((s, i) => (
               <CitationCard
                 key={s.document_id + i}

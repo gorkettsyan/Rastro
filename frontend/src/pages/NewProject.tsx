@@ -2,13 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import LanguageSwitcher from "../components/LanguageSwitcher";
-import { useAuthStore } from "../store/auth";
+import Header from "../components/Header";
 
 export default function NewProject() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { logout } = useAuthStore();
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [description, setDescription] = useState("");
@@ -30,67 +28,80 @@ export default function NewProject() {
     }
   };
 
+  const inputStyle = {
+    width: "100%",
+    background: "var(--bg-card)",
+    border: "1px solid var(--border-subtle)",
+    borderRadius: "var(--radius-md)",
+    padding: "10px var(--space-md)",
+    fontFamily: "var(--font-body)",
+    fontSize: "14px",
+    color: "var(--ink-primary)",
+    outline: "none",
+    boxSizing: "border-box" as const,
+  };
+
+  const labelStyle = {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: 500,
+    color: "var(--ink-secondary)",
+    marginBottom: "var(--space-xs)",
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={() => navigate("/")} className="font-bold text-gray-900 text-lg">
-          Rastro
-        </button>
-        <div className="flex items-center gap-3">
-          <LanguageSwitcher />
-          <button onClick={() => { logout(); navigate("/login"); }} className="text-sm text-gray-500 hover:text-gray-900">
-            {t("sign_out")}
-          </button>
-        </div>
-      </header>
+    <div className="r-page">
+      <Header />
 
-      <main className="max-w-lg mx-auto px-6 py-10">
-        <h2 className="text-2xl font-bold text-gray-900 mb-8">{t("new_project")}</h2>
+      <main className="r-main" style={{ maxWidth: "560px" }}>
+        <p className="r-page-title">{t("new_project")}</p>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col gap-5">
+        <form onSubmit={handleSubmit} className="r-card" style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t("project_title")} *</label>
+            <label style={labelStyle}>{t("project_title")} *</label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              style={inputStyle}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t("client_name")}</label>
+            <label style={labelStyle}>{t("client_name")}</label>
             <input
               type="text"
               value={clientName}
               onChange={(e) => setClientName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              style={inputStyle}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t("description")}</label>
+            <label style={labelStyle}>{t("description")}</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+              style={{ ...inputStyle, resize: "none" }}
             />
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div style={{ display: "flex", gap: "var(--space-sm)", paddingTop: "var(--space-xs)" }}>
             <button
               type="button"
               onClick={() => navigate("/")}
-              className="flex-1 border border-gray-300 text-gray-700 text-sm font-medium py-2 rounded-lg hover:bg-gray-50"
+              className="r-btn-ghost"
+              style={{ flex: 1, justifyContent: "center" }}
             >
               {t("cancel")}
             </button>
             <button
               type="submit"
               disabled={saving || !title.trim()}
-              className="flex-1 bg-gray-900 text-white text-sm font-medium py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50"
+              className="r-btn-primary"
+              style={{ flex: 1, justifyContent: "center" }}
             >
               {saving ? t("loading") : t("save")}
             </button>

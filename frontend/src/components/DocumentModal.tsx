@@ -38,50 +38,68 @@ export default function DocumentModal({ documentId, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      style={{
+        position: "fixed", inset: 0, zIndex: 50,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        background: "rgba(28,25,23,0.45)",
+      }}
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col mx-4"
+        style={{
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "var(--radius-xl)",
+          boxShadow: "var(--shadow-lg)",
+          width: "100%",
+          maxWidth: "680px",
+          maxHeight: "80vh",
+          display: "flex",
+          flexDirection: "column",
+          margin: "0 var(--space-md)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
-          <h2 className="font-semibold text-gray-900 truncate pr-4">
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "var(--space-md) var(--space-lg)",
+          borderBottom: "1px solid var(--border-subtle)",
+          flexShrink: 0,
+        }}>
+          <p style={{ fontSize: "14px", fontWeight: 500, color: "var(--ink-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "var(--space-md)" }}>
             {doc?.title ?? (loading ? "Loading…" : "Document")}
-          </h2>
+          </p>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: "var(--ink-muted)", lineHeight: 1, flexShrink: 0 }}
           >
             ×
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-lg)" }}>
           {loading && (
-            <p className="text-sm text-gray-400">Loading document…</p>
+            <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>Loading document…</p>
           )}
           {error && (
-            <p className="text-sm text-red-400">Failed to load document.</p>
+            <p style={{ fontSize: "13px", color: "var(--color-error)" }}>Failed to load document.</p>
           )}
           {doc && (
             <>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full capitalize">
-                  {doc.source}
-                </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-sm)", marginBottom: "var(--space-md)" }}>
+                <span className="r-doc-source r-pill">{doc.source}</span>
                 {doc.source_url && (
                   <a
                     href={doc.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-xs text-blue-500 hover:underline truncate"
+                    style={{ fontSize: "12px", color: "var(--ink-muted)", textDecoration: "none" }}
                   >
                     Open original ↗
                   </a>
                 )}
               </div>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
+              <p style={{ fontSize: "13px", color: "var(--ink-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.7, margin: 0 }}>
                 {doc.content}
               </p>
             </>

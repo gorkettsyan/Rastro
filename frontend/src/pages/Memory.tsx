@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import LanguageSwitcher from "../components/LanguageSwitcher";
-import { useAuthStore } from "../store/auth";
+import Header from "../components/Header";
 
 interface Memory {
   id: string;
@@ -14,8 +12,6 @@ interface Memory {
 
 export default function MemoryPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
-  const { logout } = useAuthStore();
   const [memories, setMemories] = useState<Memory[]>([]);
   const [newContent, setNewContent] = useState("");
   const [adding, setAdding] = useState(false);
@@ -56,37 +52,26 @@ export default function MemoryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <button onClick={() => navigate("/")} className="font-bold text-gray-900 text-lg">
-          Rastro
-        </button>
-        <div className="flex items-center gap-3">
-          <LanguageSwitcher />
-          <button
-            onClick={() => { logout(); navigate("/login"); }}
-            className="text-sm text-gray-500 hover:text-gray-900"
-          >
-            {t("sign_out")}
-          </button>
-        </div>
-      </header>
+    <div className="r-page">
+      <Header />
 
-      <main className="max-w-2xl mx-auto px-6 py-10">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-2xl font-bold text-gray-900">🧠 {t("memories")}</h2>
+      <main className="r-main" style={{ maxWidth: "680px" }}>
+        <div className="r-section-header" style={{ marginBottom: "var(--space-xs)" }}>
+          <p className="r-page-title">🧠 {t("memories")}</p>
           {memories.length > 0 && (
-            <button onClick={handleDeleteAll} className="text-xs text-red-400 hover:text-red-600">
+            <button onClick={handleDeleteAll} className="r-link-danger">
               {t("delete_all_memories")}
             </button>
           )}
         </div>
-        <p className="text-sm text-gray-500 mb-8">{t("memories_subtitle")}</p>
+        <p style={{ fontSize: "13px", color: "var(--ink-muted)", margin: "0 0 var(--space-xl) 0" }}>
+          {t("memories_subtitle")}
+        </p>
 
-        <div className="flex gap-2 mb-8">
+        <div className="r-memory-add" style={{ marginBottom: "var(--space-xl)" }}>
           <input
             type="text"
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="r-memory-input"
             placeholder={t("memory_placeholder")}
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
@@ -95,66 +80,52 @@ export default function MemoryPage() {
           <button
             onClick={handleAdd}
             disabled={adding || !newContent.trim()}
-            className="bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-40"
+            className="r-btn-primary"
           >
             {t("add_memory")}
           </button>
         </div>
 
         {memories.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-            <p className="text-gray-500 mb-2">{t("no_memories")}</p>
-            <p className="text-gray-400 text-sm">{t("memory_empty_hint")}</p>
+          <div className="r-empty">
+            <span className="r-empty-icon">🧠</span>
+            <p className="r-empty-title">{t("no_memories")}</p>
+            <p className="r-empty-desc">{t("memory_empty_hint")}</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="r-doc-list">
             {memories.map((m) => (
-              <div
-                key={m.id}
-                className="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-start gap-3"
-              >
-                <span className="text-gray-300 text-xs mt-1 shrink-0">
+              <div key={m.id} className="r-doc-row">
+                <span className="r-memory-source" style={{ color: "var(--ink-faint)", fontSize: "14px" }}>
                   {m.source === "auto" ? "🤖" : "✏️"}
                 </span>
-                <div className="flex-1 min-w-0">
+                <div style={{ flex: 1, minWidth: 0 }}>
                   {editingId === m.id ? (
-                    <div className="flex gap-2">
+                    <div style={{ display: "flex", gap: "var(--space-sm)" }}>
                       <input
-                        className="flex-1 border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none"
+                        className="r-memory-input"
+                        style={{ flex: 1, padding: "4px 10px", fontSize: "13px" }}
                         value={editContent}
                         onChange={(e) => setEditContent(e.target.value)}
                         onKeyDown={(e) => e.key === "Enter" && handleEdit(m.id)}
                         autoFocus
                       />
-                      <button
-                        onClick={() => handleEdit(m.id)}
-                        className="text-xs text-gray-700 font-medium"
-                      >
-                        ✓
-                      </button>
-                      <button
-                        onClick={() => setEditingId(null)}
-                        className="text-xs text-gray-400"
-                      >
-                        ✕
-                      </button>
+                      <button onClick={() => handleEdit(m.id)} className="r-link-muted">✓</button>
+                      <button onClick={() => setEditingId(null)} className="r-link-muted">✕</button>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-800">{m.content}</p>
+                    <p style={{ fontSize: "13px", color: "var(--ink-primary)", margin: 0 }}>{m.content}</p>
                   )}
                 </div>
                 {editingId !== m.id && (
-                  <div className="flex gap-2 shrink-0">
+                  <div className="r-memory-actions">
                     <button
                       onClick={() => { setEditingId(m.id); setEditContent(m.content); }}
-                      className="text-xs text-gray-400 hover:text-gray-600"
+                      className="r-link-muted"
                     >
                       {t("edit")}
                     </button>
-                    <button
-                      onClick={() => handleDelete(m.id)}
-                      className="text-xs text-red-400 hover:text-red-600"
-                    >
+                    <button onClick={() => handleDelete(m.id)} className="r-link-danger">
                       {t("delete")}
                     </button>
                   </div>

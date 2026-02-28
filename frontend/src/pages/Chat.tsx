@@ -2,11 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import { useAuthStore } from "../store/auth";
-import LanguageSwitcher from "../components/LanguageSwitcher";
+import Header from "../components/Header";
 import ConversationSidebar from "../components/ConversationSidebar";
 import MessageBubble from "../components/MessageBubble";
-import MemoryBadge from "../components/MemoryBadge";
 
 interface Conversation {
   id: string;
@@ -35,7 +33,6 @@ export default function Chat() {
   const { conversationId } = useParams<{ conversationId?: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user, logout } = useAuthStore();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -143,33 +140,18 @@ export default function Chat() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-        <button onClick={() => navigate("/")} className="font-bold text-gray-900 text-lg">
-          Rastro
-        </button>
-        <div className="flex items-center gap-3">
-          <MemoryBadge />
-          <LanguageSwitcher />
-          <span className="text-sm text-gray-500">{user?.email}</span>
-          <button
-            onClick={() => { logout(); navigate("/login"); }}
-            className="text-sm text-gray-500 hover:text-gray-900"
-          >
-            {t("sign_out")}
-          </button>
-        </div>
-      </header>
+    <div className="r-chat-page">
+      <Header />
 
-      <div className="flex flex-1 min-h-0">
+      <div className="r-chat-body">
         <ConversationSidebar conversations={conversations} onNew={handleNew} />
 
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="r-chat-area">
+          <div className="r-chat-messages">
             {messages.length === 0 && !streaming ? (
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <p className="text-xl font-semibold text-gray-700 mb-2">{t("conversation_empty")}</p>
-                <p className="text-gray-400 text-sm">{t("conversation_hint")}</p>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center" }}>
+                <p className="r-page-title" style={{ fontSize: "18px", marginBottom: "var(--space-sm)" }}>{t("conversation_empty")}</p>
+                <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("conversation_hint")}</p>
               </div>
             ) : (
               <>
@@ -189,10 +171,10 @@ export default function Chat() {
             )}
           </div>
 
-          <div className="shrink-0 bg-white border-t border-gray-200 px-6 py-4">
-            <div className="flex items-end gap-3 max-w-3xl mx-auto">
+          <div className="r-chat-input-wrap">
+            <div className="r-chat-input-inner">
               <textarea
-                className="flex-1 border border-gray-300 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="r-chat-textarea"
                 rows={1}
                 placeholder={t("type_message")}
                 value={input}
@@ -208,9 +190,9 @@ export default function Chat() {
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || streaming}
-                className="bg-gray-900 text-white px-4 py-3 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-40 shrink-0"
+                className="r-chat-send-btn"
               >
-                {streaming ? t("thinking") : "↑"}
+                {streaming ? "…" : "↑"}
               </button>
             </div>
           </div>

@@ -15,7 +15,7 @@ interface Props {
 }
 
 export default function SearchBar({ projectId, onResult }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [query, setQuery] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
@@ -32,7 +32,7 @@ export default function SearchBar({ projectId, onResult }: Props) {
 
     const token = localStorage.getItem("rastro_token");
     const base = import.meta.env.VITE_API_URL ?? "";
-    const params = new URLSearchParams({ q: trimmed });
+    const params = new URLSearchParams({ q: trimmed, lang: i18n.language || "es" });
     if (projectId) params.set("project_id", projectId);
 
     try {
@@ -86,18 +86,18 @@ export default function SearchBar({ projectId, onResult }: Props) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <form onSubmit={handleSubmit} className="r-search-wrap">
       <input
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder={t("search_placeholder")}
-        className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+        className="r-search-input"
       />
       <button
         type="submit"
         disabled={!query.trim()}
-        className="bg-gray-900 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50"
+        className="r-search-btn"
       >
         ↵
       </button>

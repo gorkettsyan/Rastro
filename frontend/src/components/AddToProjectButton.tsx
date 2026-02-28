@@ -46,27 +46,64 @@ export default function AddToProjectButton({ documentId }: Props) {
 
   if (assigned) {
     return (
-      <span className="text-xs text-green-600 font-medium">✓ {assigned}</span>
+      <span style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: 500 }}>✓ {assigned}</span>
     );
   }
 
   return (
-    <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
+    <div ref={ref} style={{ position: "relative" }} onClick={(e) => e.stopPropagation()}>
       <button
         onClick={() => setOpen((v) => !v)}
         disabled={saving || projects.length === 0}
-        className="text-xs text-gray-400 hover:text-gray-700 transition-colors disabled:opacity-40"
+        style={{
+          fontSize: "11px",
+          color: "var(--ink-muted)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: 0,
+          transition: "color 0.15s",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--ink-secondary)")}
+        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--ink-muted)")}
       >
         {saving ? "…" : "+ Add to project"}
       </button>
 
       {open && (
-        <div className="absolute left-0 top-full z-20 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[180px]">
+        <div style={{
+          position: "absolute",
+          left: 0,
+          top: "100%",
+          zIndex: 20,
+          marginTop: "4px",
+          background: "var(--bg-card)",
+          border: "1px solid var(--border-subtle)",
+          borderRadius: "var(--radius-md)",
+          boxShadow: "var(--shadow-md)",
+          padding: "4px 0",
+          minWidth: "180px",
+        }}>
           {projects.map((p) => (
             <button
               key={p.id}
               onClick={() => assign(p.id, p.title)}
-              className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 truncate"
+              style={{
+                width: "100%",
+                textAlign: "left",
+                padding: "7px var(--space-md)",
+                fontSize: "12px",
+                color: "var(--ink-secondary)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                transition: "background 0.12s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "none")}
             >
               {p.title}
             </button>

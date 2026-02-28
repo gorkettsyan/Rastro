@@ -18,30 +18,26 @@ export default function SearchResult({ query, answer, chunks, streaming }: Props
 
   return (
     <>
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 mt-4">
-        <p className="text-xs text-gray-400 mb-3 italic">"{query}"</p>
+      <div className="r-result-card">
+        <p className="r-result-query">"{query}"</p>
 
         {answer ? (
-          <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+          <p className="r-result-answer">
             {answer}
-            {streaming && (
-              <span className="inline-block w-1.5 h-4 ml-0.5 bg-gray-400 animate-pulse align-middle" />
-            )}
+            {streaming && <span className="r-cursor" />}
           </p>
         ) : (
-          <p className="text-sm text-gray-400">{t("searching")}</p>
+          <p className="r-result-answer" style={{ color: "var(--ink-muted)" }}>{t("searching")}</p>
         )}
 
         {!streaming && answer && chunks.length === 0 && (
-          <p className="text-xs text-gray-400 mt-3">{t("no_results")}</p>
+          <p style={{ fontSize: "12px", color: "var(--ink-muted)", marginTop: "12px" }}>{t("no_results")}</p>
         )}
 
         {chunks.length > 0 && (
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-              {t("sources")}
-            </p>
-            <div className="flex flex-col gap-2">
+          <div style={{ marginTop: "var(--space-md)" }}>
+            <p className="r-section-label" style={{ marginBottom: "var(--space-sm)" }}>{t("sources")}</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {chunks.map((chunk, i) => (
                 <CitationCard
                   key={chunk.document_id + i}

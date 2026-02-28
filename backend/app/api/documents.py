@@ -29,6 +29,7 @@ async def list_documents(
     db: AsyncSession = Depends(get_db),
 ):
     q = select(Document).where(Document.org_id == current_user.org_id)
+    q = q.where(Document.source != "gmail")
     if project_id:
         q = q.where(Document.project_id == project_id)
     result = await db.execute(q.order_by(Document.created_at.desc()))

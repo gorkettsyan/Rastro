@@ -6,6 +6,8 @@ import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import NewProject from "./pages/NewProject";
 import Project from "./pages/Project";
+import Chat from "./pages/Chat";
+import MemoryPage from "./pages/Memory";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +26,9 @@ export default function App() {
           <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/projects/new" element={<PrivateRoute><NewProject /></PrivateRoute>} />
           <Route path="/projects/:id" element={<PrivateRoute><Project /></PrivateRoute>} />
+          <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
+          <Route path="/chat/:conversationId" element={<PrivateRoute><Chat /></PrivateRoute>} />
+          <Route path="/memory" element={<PrivateRoute><MemoryPage /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

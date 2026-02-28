@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import MemoryBadge from "../components/MemoryBadge";
 import { useAuthStore } from "../store/auth";
 import { api } from "../api/client";
 import LanguageSwitcher from "../components/LanguageSwitcher";
@@ -74,6 +75,10 @@ export default function Dashboard() {
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <span className="font-bold text-gray-900 text-lg">{t("app_name")}</span>
         <div className="flex items-center gap-3">
+          <Link to="/chat" className="text-sm text-gray-500 hover:text-gray-900">
+            {t("chat")}
+          </Link>
+          <MemoryBadge />
           <LanguageSwitcher />
           <span className="text-sm text-gray-500">{user?.email}</span>
           <button

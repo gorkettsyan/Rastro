@@ -44,6 +44,7 @@ services:
     volumes:
       - ./backend:/app
       - ./tests:/app/tests
+      - /app/.venv
 
   worker:
     build: ./backend
@@ -56,6 +57,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - /app/.venv
     restart: unless-stopped
 
   frontend:

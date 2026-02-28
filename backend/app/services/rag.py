@@ -24,11 +24,12 @@ TOP_K_RERANK = 5
 RRF_K = 60
 
 _SYSTEM_PROMPT = (
-    "Eres un asistente experto que ayuda a los usuarios a encontrar información "
-    "en los documentos de su organización. Responde ÚNICAMENTE basándote en los fragmentos "
-    "proporcionados. Cita las fuentes usando el formato [Fuente N]. Si no puedes responder "
-    "con la información disponible, indícalo claramente. Nunca inventes datos ni supongas "
-    "información que no esté en los fragmentos. Responde en el mismo idioma que la pregunta."
+    "You are an expert assistant that helps users find information in their organization's documents. "
+    "Answer ONLY based on the provided fragments. Cite sources using the format [Source N]. "
+    "If you cannot answer with the available information, say so clearly. "
+    "Never invent data or assume information not present in the fragments. "
+    "IMPORTANT: Always respond in the exact same language the user wrote their question in. "
+    "If the user writes in English, respond in English. If in Spanish, respond in Spanish."
 )
 
 _QUERY_REWRITE_PROMPT = (
@@ -205,6 +206,12 @@ def _reciprocal_rank_fusion(
     return result
 
 
+# Alias for chat API (test patches app.api.chat._similarity_search)
+_similarity_search = _vector_search
+# Public export for chat API
+SYSTEM_PROMPT = _SYSTEM_PROMPT
+
+
 def _build_context(chunks: list[dict]) -> str:
     return "\n\n".join(
         f"[Fuente {i}]\n{c['content']}" for i, c in enumerate(chunks, 1)
@@ -279,7 +286,7 @@ async def stream_rag_response(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": f"{context}\n\nPregunta: {query}"},
+                {"role": "user", "content": f"{context}\n\n{query}"},
             ],
             stream=True,
             temperature=0.2,

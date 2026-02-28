@@ -5,5 +5,11 @@ from app.models.project import Project
 from app.models.document import Document
 from app.models.chunk import Chunk
 from app.models.search_log import SearchLog
+from app.models.conversation import Conversation
+from app.models.message import Message
+from app.models.memory import Memory
 
-__all__ = ["Organization", "User", "IntegrationToken", "Project", "Document", "Chunk", "SearchLog"]
+__all__ = [
+    "Organization", "User", "IntegrationToken", "Project", "Document",
+    "Chunk", "SearchLog", "Conversation", "Message", "Memory",
+]

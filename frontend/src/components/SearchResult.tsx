@@ -32,7 +32,18 @@ export default function SearchResult({ query, answer, chunks, streaming }: Props
         <p className="text-xs text-gray-400 mt-3">{t("no_results")}</p>
       )}
 
-      {chunks.length > 0 && <CitationCard chunks={chunks} />}
+      {chunks.length > 0 && (
+        <div className="mt-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            {t("sources")}
+          </p>
+          <div className="flex flex-col gap-2">
+            {chunks.map((chunk, i) => (
+              <CitationCard key={chunk.document_id + i} index={i + 1} source={chunk} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

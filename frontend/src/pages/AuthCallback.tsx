@@ -22,7 +22,7 @@ export default function AuthCallback() {
     api.get("/auth/me")
       .then(({ data }) => {
         setUser(data);
-        navigate("/");
+        navigate("/dashboard");
       })
       .catch(() => navigate("/login"));
   }, []);

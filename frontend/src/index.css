@@ -1594,3 +1594,366 @@ body {
   font-size: 13px;
   color: var(--ink-muted);
 }
+
+/* ─────────────────────────────────────────
+   LANDING PAGE (scoped under .r-landing)
+   ───────────────────────────────────────── */
+
+.r-landing {
+  --landing-bg:           #0b1120;
+  --landing-bg-alt:       #111827;
+  --landing-card-bg:      #1a2332;
+  --landing-ink:          #f1f5f9;
+  --landing-ink-muted:    #94a3b8;
+  --landing-border:       #1e293b;
+  --landing-accent:       #3b82f6;
+  --landing-accent-hover: #2563eb;
+
+  min-height: 100vh;
+  background: var(--landing-bg);
+  color: var(--landing-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Nav ── */
+.r-landing-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+
+.r-landing-logo {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--landing-ink);
+}
+
+.r-landing-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.r-landing-nav-link {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--landing-ink-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.r-landing-nav-link:hover { color: var(--landing-ink); }
+
+/* ── Override lang switcher colors in landing ── */
+.r-landing .r-lang-btn {
+  color: var(--landing-ink-muted);
+}
+.r-landing .r-lang-btn:hover {
+  color: var(--landing-ink);
+}
+
+/* ── Buttons ── */
+.r-landing-btn-primary {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  background: var(--landing-accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.r-landing-btn-primary:hover { background: var(--landing-accent-hover); }
+
+.r-landing-btn-lg {
+  font-size: 13px;
+  padding: 14px 32px;
+  border-radius: 10px;
+}
+
+/* ── Hero ── */
+.r-landing-hero {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 80px 24px 60px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.r-landing-h1 {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--landing-ink);
+  margin: 0;
+}
+
+.r-landing-hero-sub {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--landing-ink-muted);
+  margin: 0;
+  max-width: 600px;
+}
+
+.r-landing-cta-note {
+  font-size: 13px;
+  color: var(--landing-ink-muted);
+  margin: 0;
+}
+
+.r-landing-screenshot-wrap {
+  width: 100%;
+  max-width: 720px;
+  margin-top: 20px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--landing-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.r-landing-screenshot {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── Sections ── */
+.r-landing-section {
+  background: var(--landing-bg);
+  padding: 80px 24px;
+}
+
+.r-landing-section-alt {
+  background: var(--landing-bg-alt);
+}
+
+.r-landing-section-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.r-landing-section-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--landing-accent);
+}
+
+.r-landing-h2 {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  color: var(--landing-ink);
+  margin: 0;
+  text-align: center;
+}
+
+/* ── Grids ── */
+.r-landing-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.r-landing-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+  margin-top: 16px;
+}
+
+/* ── Cards ── */
+.r-landing-card {
+  background: var(--landing-card-bg);
+  border: 1px solid var(--landing-border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.r-landing-card-title {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--landing-ink);
+  margin: 0;
+}
+
+.r-landing-card-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--landing-ink-muted);
+  margin: 0;
+}
+
+/* ── Steps ── */
+.r-landing-step {
+  background: var(--landing-card-bg);
+  border: 1px solid var(--landing-border);
+  border-radius: 12px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.r-landing-step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--landing-accent);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+/* ── Differentiation body ── */
+.r-landing-diff-body {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--landing-ink-muted);
+  margin: 0;
+  max-width: 680px;
+  text-align: center;
+}
+
+/* ── Social proof placeholder ── */
+.r-landing-proof-placeholder {
+  width: 100%;
+  max-width: 800px;
+  padding: 48px 24px;
+  border: 2px dashed var(--landing-border);
+  border-radius: 12px;
+  text-align: center;
+  color: var(--landing-ink-muted);
+  font-size: 14px;
+}
+.r-landing-proof-placeholder p { margin: 0; }
+
+/* ── Final CTA ── */
+.r-landing-final-cta {
+  background: var(--landing-bg);
+  padding: 80px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ── Footer ── */
+.r-landing-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 24px;
+  border-top: 1px solid var(--landing-border);
+}
+
+.r-landing-footer-brand {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--landing-ink-muted);
+}
+
+.r-landing-footer-links {
+  display: flex;
+  gap: 24px;
+}
+
+.r-landing-footer-link {
+  font-size: 13px;
+  color: var(--landing-ink-muted);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.r-landing-footer-link:hover { color: var(--landing-ink); }
+
+/* ── Landing page responsive ── */
+@media (max-width: 768px) {
+  .r-landing-h1 {
+    font-size: 32px;
+  }
+
+  .r-landing-h2 {
+    font-size: 24px;
+  }
+
+  .r-landing-hero {
+    padding: 48px 20px 40px;
+  }
+
+  .r-landing-hero-sub {
+    font-size: 16px;
+  }
+
+  .r-landing-section {
+    padding: 48px 20px;
+  }
+
+  .r-landing-grid-3,
+  .r-landing-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .r-landing-final-cta {
+    padding: 48px 20px;
+  }
+
+  .r-landing-footer {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .r-landing-nav {
+    padding: 16px 20px;
+  }
+
+  .r-landing-nav-link {
+    display: none;
+  }
+}

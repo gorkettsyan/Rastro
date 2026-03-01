@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
 const NAV_ITEMS = [
-  { key: "nav_dashboard", path: "/", icon: "grid" },
+  { key: "nav_dashboard", path: "/dashboard", icon: "grid" },
   { key: "nav_chat", path: "/chat", icon: "chat" },
   { key: "nav_obligations", path: "/obligations", icon: "calendar" },
   { key: "nav_clause_comparison", path: "/clause-comparison", icon: "compare" },
@@ -36,11 +36,11 @@ export default function Sidebar() {
   const location = useLocation();
 
   const isActive = (path: string) =>
-    path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+    path === "/dashboard" ? location.pathname === "/dashboard" : location.pathname.startsWith(path);
 
   return (
     <aside className="r-sidebar">
-      <Link to="/" className="r-sidebar-logo">Rastro</Link>
+      <Link to="/dashboard" className="r-sidebar-logo">Rastro</Link>
 
       <nav className="r-sidebar-nav">
         {NAV_ITEMS.map((item) => (

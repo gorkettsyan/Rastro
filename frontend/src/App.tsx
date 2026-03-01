@@ -13,6 +13,7 @@ import Settings from "./pages/Settings";
 import InviteAccept from "./pages/InviteAccept";
 import Obligations from "./pages/Obligations";
 import ClauseComparison from "./pages/ClauseComparison";
+import Landing from "./pages/Landing";
 import AppLayout from "./components/AppLayout";
 import ToastContainer from "./components/ToastContainer";
 
@@ -28,11 +29,12 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/invite/:token" element={<InviteAccept />} />
           <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/projects/new" element={<NewProject />} />
             <Route path="/projects/:id" element={<Project />} />
             <Route path="/chat" element={<Chat />} />
@@ -43,7 +45,7 @@ export default function App() {
             <Route path="/integrations" element={<Integrations />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
       <ToastContainer />

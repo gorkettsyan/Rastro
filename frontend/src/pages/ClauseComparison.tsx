@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import Header from "../components/Header";
 import LearningHint from "../components/LearningHint";
 
 interface Project {
@@ -172,10 +171,8 @@ export default function ClauseComparison() {
   const colCount = selectedResults.length;
 
   return (
-    <div className="r-page">
-      <Header />
-      <main className="r-main">
-        <LearningHint textKey="hint_clause_comparison" />
+    <main className="r-main">
+      <LearningHint textKey="hint_clause_comparison" />
 
         <h1 className="r-page-title">{t("clause_comparison")}</h1>
 
@@ -374,7 +371,6 @@ export default function ClauseComparison() {
             </div>
           </div>
         )}
-      </main>
-    </div>
+    </main>
   );
 }

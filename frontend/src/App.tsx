@@ -13,6 +13,7 @@ import Settings from "./pages/Settings";
 import InviteAccept from "./pages/InviteAccept";
 import Obligations from "./pages/Obligations";
 import ClauseComparison from "./pages/ClauseComparison";
+import AppLayout from "./components/AppLayout";
 import ToastContainer from "./components/ToastContainer";
 
 const queryClient = new QueryClient();
@@ -29,17 +30,19 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-          <Route path="/projects/new" element={<PrivateRoute><NewProject /></PrivateRoute>} />
-          <Route path="/projects/:id" element={<PrivateRoute><Project /></PrivateRoute>} />
-          <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
-          <Route path="/chat/:conversationId" element={<PrivateRoute><Chat /></PrivateRoute>} />
-          <Route path="/obligations" element={<PrivateRoute><Obligations /></PrivateRoute>} />
-          <Route path="/clause-comparison" element={<PrivateRoute><ClauseComparison /></PrivateRoute>} />
-          <Route path="/memory" element={<PrivateRoute><MemoryPage /></PrivateRoute>} />
-          <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
-          <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
           <Route path="/invite/:token" element={<InviteAccept />} />
+          <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/projects/new" element={<NewProject />} />
+            <Route path="/projects/:id" element={<Project />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/chat/:conversationId" element={<Chat />} />
+            <Route path="/obligations" element={<Obligations />} />
+            <Route path="/clause-comparison" element={<ClauseComparison />} />
+            <Route path="/memory" element={<MemoryPage />} />
+            <Route path="/integrations" element={<Integrations />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

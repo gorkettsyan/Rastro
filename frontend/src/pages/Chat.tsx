@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import Header from "../components/Header";
 import ConversationSidebar from "../components/ConversationSidebar";
 import MessageBubble from "../components/MessageBubble";
 import LearningHint from "../components/LearningHint";
@@ -143,62 +142,58 @@ export default function Chat() {
   };
 
   return (
-    <div className="r-chat-page">
-      <Header />
+    <div className="r-chat-layout">
+      <ConversationSidebar conversations={conversations} onNew={handleNew} />
 
-      <div className="r-chat-body">
-        <ConversationSidebar conversations={conversations} onNew={handleNew} />
-
-        <div className="r-chat-area">
-          <div className="r-chat-messages">
-            <LearningHint textKey="hint_chat" />
-            {messages.length === 0 && !streaming ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center" }}>
-                <p className="r-page-title" style={{ fontSize: "18px", marginBottom: "var(--space-sm)" }}>{t("conversation_empty")}</p>
-                <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("conversation_hint")}</p>
-              </div>
-            ) : (
-              <>
-                {messages.map((m) => (
-                  <MessageBubble key={m.id} role={m.role} content={m.content} sources={m.sources} />
-                ))}
-                {streaming && (
-                  <MessageBubble
-                    role="assistant"
-                    content={streamingContent || ""}
-                    sources={streamingSources}
-                    streaming={!streamingContent}
-                  />
-                )}
-                <div ref={bottomRef} />
-              </>
-            )}
-          </div>
-
-          <div className="r-chat-input-wrap">
-            <div className="r-chat-input-inner">
-              <textarea
-                className="r-chat-textarea"
-                rows={1}
-                placeholder={t("type_message")}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                disabled={streaming}
-              />
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || streaming}
-                className="r-chat-send-btn"
-              >
-                {streaming ? "…" : "↑"}
-              </button>
+      <div className="r-chat-area">
+        <div className="r-chat-messages">
+          <LearningHint textKey="hint_chat" />
+          {messages.length === 0 && !streaming ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center" }}>
+              <p className="r-page-title" style={{ fontSize: "18px", marginBottom: "var(--space-sm)" }}>{t("conversation_empty")}</p>
+              <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("conversation_hint")}</p>
             </div>
+          ) : (
+            <>
+              {messages.map((m) => (
+                <MessageBubble key={m.id} role={m.role} content={m.content} sources={m.sources} />
+              ))}
+              {streaming && (
+                <MessageBubble
+                  role="assistant"
+                  content={streamingContent || ""}
+                  sources={streamingSources}
+                  streaming={!streamingContent}
+                />
+              )}
+              <div ref={bottomRef} />
+            </>
+          )}
+        </div>
+
+        <div className="r-chat-input-wrap">
+          <div className="r-chat-input-inner">
+            <textarea
+              className="r-chat-textarea"
+              rows={1}
+              placeholder={t("type_message")}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              disabled={streaming}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() || streaming}
+              className="r-chat-send-btn"
+            >
+              {streaming ? "…" : "↑"}
+            </button>
           </div>
         </div>
       </div>

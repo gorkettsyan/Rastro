@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { toast } from "../store/toast";
-import Header from "../components/Header";
 import LearningHint from "../components/LearningHint";
 
 interface Obligation {
@@ -129,8 +128,7 @@ export default function Obligations() {
   };
 
   return (
-    <div className="r-page">
-      <Header />
+    <>
       <main className="r-main">
         <LearningHint textKey="hint_obligations" />
 
@@ -258,6 +256,6 @@ export default function Obligations() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

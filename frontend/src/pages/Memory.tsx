@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import Header from "../components/Header";
 import LearningHint from "../components/LearningHint";
 
 interface Memory {
@@ -53,91 +52,87 @@ export default function MemoryPage() {
   };
 
   return (
-    <div className="r-page">
-      <Header />
+    <main className="r-main" style={{ maxWidth: "680px" }}>
+      <LearningHint textKey="hint_memory" />
 
-      <main className="r-main" style={{ maxWidth: "680px" }}>
-        <LearningHint textKey="hint_memory" />
-
-        <div className="r-section-header" style={{ marginBottom: "var(--space-xs)" }}>
-          <p className="r-page-title">🧠 {t("memories")}</p>
-          {memories.length > 0 && (
-            <button onClick={handleDeleteAll} className="r-link-danger">
-              {t("delete_all_memories")}
-            </button>
-          )}
-        </div>
-        <p style={{ fontSize: "13px", color: "var(--ink-muted)", margin: "0 0 var(--space-xl) 0" }}>
-          {t("memories_subtitle")}
-        </p>
-
-        <div className="r-memory-add" style={{ marginBottom: "var(--space-xl)" }}>
-          <input
-            type="text"
-            className="r-memory-input"
-            placeholder={t("memory_placeholder")}
-            value={newContent}
-            onChange={(e) => setNewContent(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          />
-          <button
-            onClick={handleAdd}
-            disabled={adding || !newContent.trim()}
-            className="r-btn-primary"
-          >
-            {t("add_memory")}
+      <div className="r-section-header" style={{ marginBottom: "var(--space-xs)" }}>
+        <p className="r-page-title">🧠 {t("memories")}</p>
+        {memories.length > 0 && (
+          <button onClick={handleDeleteAll} className="r-link-danger">
+            {t("delete_all_memories")}
           </button>
-        </div>
+        )}
+      </div>
+      <p style={{ fontSize: "13px", color: "var(--ink-muted)", margin: "0 0 var(--space-xl) 0" }}>
+        {t("memories_subtitle")}
+      </p>
 
-        {memories.length === 0 ? (
-          <div className="r-empty">
-            <span className="r-empty-icon">🧠</span>
-            <p className="r-empty-title">{t("no_memories")}</p>
-            <p className="r-empty-desc">{t("memory_empty_hint")}</p>
-          </div>
-        ) : (
-          <div className="r-doc-list">
-            {memories.map((m) => (
-              <div key={m.id} className="r-doc-row">
-                <span className="r-memory-source" style={{ color: "var(--ink-faint)", fontSize: "14px" }}>
-                  {m.source === "auto" ? "🤖" : "✏️"}
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {editingId === m.id ? (
-                    <div style={{ display: "flex", gap: "var(--space-sm)" }}>
-                      <input
-                        className="r-memory-input"
-                        style={{ flex: 1, padding: "4px 10px", fontSize: "13px" }}
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleEdit(m.id)}
-                        autoFocus
-                      />
-                      <button onClick={() => handleEdit(m.id)} className="r-link-muted">✓</button>
-                      <button onClick={() => setEditingId(null)} className="r-link-muted">✕</button>
-                    </div>
-                  ) : (
-                    <p style={{ fontSize: "13px", color: "var(--ink-primary)", margin: 0 }}>{m.content}</p>
-                  )}
-                </div>
-                {editingId !== m.id && (
-                  <div className="r-memory-actions">
-                    <button
-                      onClick={() => { setEditingId(m.id); setEditContent(m.content); }}
-                      className="r-link-muted"
-                    >
-                      {t("edit")}
-                    </button>
-                    <button onClick={() => handleDelete(m.id)} className="r-link-danger">
-                      {t("delete")}
-                    </button>
+      <div className="r-memory-add" style={{ marginBottom: "var(--space-xl)" }}>
+        <input
+          type="text"
+          className="r-memory-input"
+          placeholder={t("memory_placeholder")}
+          value={newContent}
+          onChange={(e) => setNewContent(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+        />
+        <button
+          onClick={handleAdd}
+          disabled={adding || !newContent.trim()}
+          className="r-btn-primary"
+        >
+          {t("add_memory")}
+        </button>
+      </div>
+
+      {memories.length === 0 ? (
+        <div className="r-empty">
+          <span className="r-empty-icon">🧠</span>
+          <p className="r-empty-title">{t("no_memories")}</p>
+          <p className="r-empty-desc">{t("memory_empty_hint")}</p>
+        </div>
+      ) : (
+        <div className="r-doc-list">
+          {memories.map((m) => (
+            <div key={m.id} className="r-doc-row">
+              <span className="r-memory-source" style={{ color: "var(--ink-faint)", fontSize: "14px" }}>
+                {m.source === "auto" ? "🤖" : "✏️"}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {editingId === m.id ? (
+                  <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+                    <input
+                      className="r-memory-input"
+                      style={{ flex: 1, padding: "4px 10px", fontSize: "13px" }}
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleEdit(m.id)}
+                      autoFocus
+                    />
+                    <button onClick={() => handleEdit(m.id)} className="r-link-muted">✓</button>
+                    <button onClick={() => setEditingId(null)} className="r-link-muted">✕</button>
                   </div>
+                ) : (
+                  <p style={{ fontSize: "13px", color: "var(--ink-primary)", margin: 0 }}>{m.content}</p>
                 )}
               </div>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
+              {editingId !== m.id && (
+                <div className="r-memory-actions">
+                  <button
+                    onClick={() => { setEditingId(m.id); setEditContent(m.content); }}
+                    className="r-link-muted"
+                  >
+                    {t("edit")}
+                  </button>
+                  <button onClick={() => handleDelete(m.id)} className="r-link-danger">
+                    {t("delete")}
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </main>
   );
 }

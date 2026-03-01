@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { toast } from "../store/toast";
-import Header from "../components/Header";
 import SearchBar from "../components/SearchBar";
 import SearchResult from "../components/SearchResult";
 import ProjectMembers from "../components/ProjectMembers";
@@ -96,128 +95,121 @@ export default function Project() {
 
   if (!project) {
     return (
-      <div className="r-page">
-        <Header />
-        <main className="r-main">
-          <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("loading")}</p>
-        </main>
-      </div>
+      <main className="r-main">
+        <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("loading")}</p>
+      </main>
     );
   }
 
   const nonGmailDocs = documents.filter((d) => d.source !== "gmail");
 
   return (
-    <div className="r-page">
-      <Header />
+    <main className="r-main">
+      <LearningHint textKey="hint_project" />
 
-      <main className="r-main">
-        <LearningHint textKey="hint_project" />
-
-        {/* Project header */}
-        <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <h2 className="r-page-title">{project.title}</h2>
-            <Link to={`/chat?project=${id}`} className="r-btn-ghost">{t("ask_about_project")}</Link>
-          </div>
-          {project.client_name && (
-            <p style={{ fontSize: "14px", color: "var(--ink-secondary)", marginTop: "var(--space-xs)" }}>
-              {project.client_name}
-            </p>
-          )}
-          <span className={`r-pill ${project.status === "active" ? "active" : "archived"}`} style={{ marginTop: "var(--space-sm)", display: "inline-flex" }}>
-            {t(`status_${project.status}`)}
-          </span>
+      {/* Project header */}
+      <div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h2 className="r-page-title">{project.title}</h2>
+          <Link to={`/chat?project=${id}`} className="r-btn-ghost">{t("ask_about_project")}</Link>
         </div>
+        {project.client_name && (
+          <p style={{ fontSize: "14px", color: "var(--ink-secondary)", marginTop: "var(--space-xs)" }}>
+            {project.client_name}
+          </p>
+        )}
+        <span className={`r-pill ${project.status === "active" ? "active" : "archived"}`} style={{ marginTop: "var(--space-sm)", display: "inline-flex" }}>
+          {t(`status_${project.status}`)}
+        </span>
+      </div>
 
-        {/* Project-scoped search */}
-        <div>
-          <SearchBar projectId={id} onResult={setSearchState} />
-          {searchState && (
-            <SearchResult
-              query={searchState.query}
-              answer={searchState.answer}
-              chunks={searchState.chunks}
-              streaming={searchState.streaming}
+      {/* Project-scoped search */}
+      <div>
+        <SearchBar projectId={id} onResult={setSearchState} />
+        {searchState && (
+          <SearchResult
+            query={searchState.query}
+            answer={searchState.answer}
+            chunks={searchState.chunks}
+            streaming={searchState.streaming}
+          />
+        )}
+      </div>
+
+      {/* Documents */}
+      <div className="r-section">
+        <div className="r-section-header">
+          <p className="r-section-label">{t("documents")}</p>
+          <label className="r-btn-primary" style={{ cursor: "pointer" }}>
+            {uploading ? t("uploading") : `+ ${t("upload_document")}`}
+            <input
+              type="file"
+              accept=".pdf,.docx,.txt"
+              style={{ display: "none" }}
+              onChange={handleUpload}
+              disabled={uploading}
             />
-          )}
+          </label>
         </div>
 
-        {/* Documents */}
-        <div className="r-section">
-          <div className="r-section-header">
-            <p className="r-section-label">{t("documents")}</p>
-            <label className="r-btn-primary" style={{ cursor: "pointer" }}>
-              {uploading ? t("uploading") : `+ ${t("upload_document")}`}
-              <input
-                type="file"
-                accept=".pdf,.docx,.txt"
-                style={{ display: "none" }}
-                onChange={handleUpload}
-                disabled={uploading}
-              />
-            </label>
+        {nonGmailDocs.length === 0 ? (
+          <div className="r-empty">
+            <span className="r-empty-icon">📄</span>
+            <p className="r-empty-title">{t("no_docs_title")}</p>
+            <p className="r-empty-desc">{t("no_docs_desc")}</p>
           </div>
-
-          {nonGmailDocs.length === 0 ? (
-            <div className="r-empty">
-              <span className="r-empty-icon">📄</span>
-              <p className="r-empty-title">{t("no_docs_title")}</p>
-              <p className="r-empty-desc">{t("no_docs_desc")}</p>
-            </div>
-          ) : (
-            <div className="r-doc-list">
-              {nonGmailDocs.map((doc) => (
-                <div key={doc.id} className="r-doc-row">
-                  <span className="r-doc-title">{doc.title}</span>
-                  <span className={statusPillClass(doc.indexing_status)}>
-                    {t(doc.indexing_status === "done" ? "indexed"
-                      : doc.indexing_status === "error" ? "error"
-                      : "indexing")}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Obligations */}
-        <div className="r-section">
-          <div className="r-section-header">
-            <p className="r-section-label">{t("project_obligations")}</p>
-            {obligations.length > 0 && (
-              <Link to="/obligations" className="r-btn-ghost" style={{ padding: "6px 12px" }}>
-                {t("view_all")} →
-              </Link>
-            )}
+        ) : (
+          <div className="r-doc-list">
+            {nonGmailDocs.map((doc) => (
+              <div key={doc.id} className="r-doc-row">
+                <span className="r-doc-title">{doc.title}</span>
+                <span className={statusPillClass(doc.indexing_status)}>
+                  {t(doc.indexing_status === "done" ? "indexed"
+                    : doc.indexing_status === "error" ? "error"
+                    : "indexing")}
+                </span>
+              </div>
+            ))}
           </div>
-          {obligations.length === 0 ? (
-            <div className="r-empty">
-              <p className="r-empty-title">{t("no_project_obligations")}</p>
-              <p className="r-empty-desc">{t("no_project_obligations_desc")}</p>
-            </div>
-          ) : (
-            <div className="r-doc-list">
-              {obligations.slice(0, 5).map((ob) => (
-                <div key={ob.id} className="r-doc-row">
-                  <span className={`r-pill ${ob.obligation_type === "other" ? "" : "active"}`}>
-                    {t(`type_${ob.obligation_type}`)}
-                  </span>
-                  <span className="r-doc-title">{ob.description}</span>
-                  {ob.due_date && (
-                    <span style={{ fontSize: "12px", color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
-                      {new Date(ob.due_date).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
+        )}
+      </div>
+
+      {/* Obligations */}
+      <div className="r-section">
+        <div className="r-section-header">
+          <p className="r-section-label">{t("project_obligations")}</p>
+          {obligations.length > 0 && (
+            <Link to="/obligations" className="r-btn-ghost" style={{ padding: "6px 12px" }}>
+              {t("view_all")} →
+            </Link>
           )}
         </div>
+        {obligations.length === 0 ? (
+          <div className="r-empty">
+            <p className="r-empty-title">{t("no_project_obligations")}</p>
+            <p className="r-empty-desc">{t("no_project_obligations_desc")}</p>
+          </div>
+        ) : (
+          <div className="r-doc-list">
+            {obligations.slice(0, 5).map((ob) => (
+              <div key={ob.id} className="r-doc-row">
+                <span className={`r-pill ${ob.obligation_type === "other" ? "" : "active"}`}>
+                  {t(`type_${ob.obligation_type}`)}
+                </span>
+                <span className="r-doc-title">{ob.description}</span>
+                {ob.due_date && (
+                  <span style={{ fontSize: "12px", color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
+                    {new Date(ob.due_date).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-        {/* Project members */}
-        {id && <ProjectMembers projectId={id} />}
-      </main>
-    </div>
+      {/* Project members */}
+      {id && <ProjectMembers projectId={id} />}
+    </main>
   );
 }

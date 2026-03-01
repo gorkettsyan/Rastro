@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
-import Header from "../components/Header";
 
 export default function NewProject() {
   const navigate = useNavigate();
@@ -50,64 +49,60 @@ export default function NewProject() {
   };
 
   return (
-    <div className="r-page">
-      <Header />
+    <main className="r-main" style={{ maxWidth: "560px" }}>
+      <p className="r-page-title">{t("new_project")}</p>
 
-      <main className="r-main" style={{ maxWidth: "560px" }}>
-        <p className="r-page-title">{t("new_project")}</p>
+      <form onSubmit={handleSubmit} className="r-card" style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
+        <div>
+          <label style={labelStyle}>{t("project_title")} *</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            style={inputStyle}
+          />
+        </div>
 
-        <form onSubmit={handleSubmit} className="r-card" style={{ display: "flex", flexDirection: "column", gap: "var(--space-lg)" }}>
-          <div>
-            <label style={labelStyle}>{t("project_title")} *</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              required
-              style={inputStyle}
-            />
-          </div>
+        <div>
+          <label style={labelStyle}>{t("client_name")}</label>
+          <input
+            type="text"
+            value={clientName}
+            onChange={(e) => setClientName(e.target.value)}
+            style={inputStyle}
+          />
+        </div>
 
-          <div>
-            <label style={labelStyle}>{t("client_name")}</label>
-            <input
-              type="text"
-              value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
-              style={inputStyle}
-            />
-          </div>
+        <div>
+          <label style={labelStyle}>{t("description")}</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={3}
+            style={{ ...inputStyle, resize: "none" }}
+          />
+        </div>
 
-          <div>
-            <label style={labelStyle}>{t("description")}</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              style={{ ...inputStyle, resize: "none" }}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: "var(--space-sm)", paddingTop: "var(--space-xs)" }}>
-            <button
-              type="button"
-              onClick={() => navigate("/")}
-              className="r-btn-ghost"
-              style={{ flex: 1, justifyContent: "center" }}
-            >
-              {t("cancel")}
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !title.trim()}
-              className="r-btn-primary"
-              style={{ flex: 1, justifyContent: "center" }}
-            >
-              {saving ? t("loading") : t("save")}
-            </button>
-          </div>
-        </form>
-      </main>
-    </div>
+        <div style={{ display: "flex", gap: "var(--space-sm)", paddingTop: "var(--space-xs)" }}>
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="r-btn-ghost"
+            style={{ flex: 1, justifyContent: "center" }}
+          >
+            {t("cancel")}
+          </button>
+          <button
+            type="submit"
+            disabled={saving || !title.trim()}
+            className="r-btn-primary"
+            style={{ flex: 1, justifyContent: "center" }}
+          >
+            {saving ? t("loading") : t("save")}
+          </button>
+        </div>
+      </form>
+    </main>
   );
 }

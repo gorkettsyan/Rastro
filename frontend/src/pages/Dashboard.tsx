@@ -3,7 +3,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../store/auth";
 import { api } from "../api/client";
-import Header from "../components/Header";
 import SearchBar from "../components/SearchBar";
 import SearchResult from "../components/SearchResult";
 import { CitedChunk } from "../components/CitationCard";
@@ -118,117 +117,113 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="r-page">
-      <Header />
+    <main className="r-main">
+      <LearningHint textKey="hint_dashboard" />
 
-      <main className="r-main">
-        <LearningHint textKey="hint_dashboard" />
+      {/* Global search */}
+      <div>
+        <SearchBar onResult={setSearchState} />
+        {searchState && (
+          <SearchResult
+            query={searchState.query}
+            answer={searchState.answer}
+            chunks={searchState.chunks}
+            streaming={searchState.streaming}
+          />
+        )}
+      </div>
 
-        {/* Global search */}
-        <div>
-          <SearchBar onResult={setSearchState} />
-          {searchState && (
-            <SearchResult
-              query={searchState.query}
-              answer={searchState.answer}
-              chunks={searchState.chunks}
-              streaming={searchState.streaming}
-            />
-          )}
+      {!loading && (
+        <div className="r-stats-row">
+          <Link to="/projects" className="r-stat-card">
+            <span className="r-stat-number">{documents.length}</span>
+            <span className="r-stat-label">{t("stats_documents")}</span>
+          </Link>
+          <Link to="/obligations" className="r-stat-card">
+            <span className="r-stat-number">{obligationCount}</span>
+            <span className="r-stat-label">{t("stats_obligations")}</span>
+          </Link>
+          <Link to="/memory" className="r-stat-card">
+            <span className="r-stat-number">{memoryCount}</span>
+            <span className="r-stat-label">{t("stats_memories")}</span>
+          </Link>
+        </div>
+      )}
+
+      <UpcomingObligations />
+
+      {/* Projects */}
+      <div className="r-section">
+        <div className="r-section-header">
+          <p className="r-section-label">{t("projects")}</p>
+          <Link to="/projects/new" className="r-btn-primary">
+            + {t("new_project")}
+          </Link>
         </div>
 
-        {!loading && (
-          <div className="r-stats-row">
-            <Link to="/projects" className="r-stat-card">
-              <span className="r-stat-number">{documents.length}</span>
-              <span className="r-stat-label">{t("stats_documents")}</span>
-            </Link>
-            <Link to="/obligations" className="r-stat-card">
-              <span className="r-stat-number">{obligationCount}</span>
-              <span className="r-stat-label">{t("stats_obligations")}</span>
-            </Link>
-            <Link to="/memory" className="r-stat-card">
-              <span className="r-stat-number">{memoryCount}</span>
-              <span className="r-stat-label">{t("stats_memories")}</span>
-            </Link>
+        {loading ? (
+          <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("loading")}</p>
+        ) : projects.length === 0 ? (
+          <div className="r-empty">
+            <span className="r-empty-icon">📁</span>
+            <p className="r-empty-title">{t("no_projects_title")}</p>
+            <p className="r-empty-desc">{t("no_projects_desc")}</p>
+          </div>
+        ) : (
+          <div className="r-project-grid">
+            {projects.map((p) => (
+              <Link key={p.id} to={`/projects/${p.id}`} className="r-project-card">
+                <div>
+                  <p className="r-project-name">{p.title}</p>
+                  {p.client_name && <p className="r-project-client">{p.client_name}</p>}
+                </div>
+                <div className="r-project-footer">
+                  <span className={`r-pill ${p.status === "active" ? "active" : "archived"}`}>
+                    {t(`status_${p.status}`)}
+                  </span>
+                  <span className="r-project-arrow">→</span>
+                </div>
+              </Link>
+            ))}
           </div>
         )}
+      </div>
 
-        <UpcomingObligations />
-
-        {/* Projects */}
+      {/* All documents */}
+      {!loading && (
         <div className="r-section">
           <div className="r-section-header">
-            <p className="r-section-label">{t("projects")}</p>
-            <Link to="/projects/new" className="r-btn-primary">
-              + {t("new_project")}
-            </Link>
+            <p className="r-section-label">{t("all_documents")}</p>
+            {emailCount > 0 && (
+              <button className="r-btn-filter" onClick={toggleEmails}>
+                {showEmails ? t("hide_emails") : t("show_emails")} ({emailCount})
+              </button>
+            )}
           </div>
 
-          {loading ? (
-            <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("loading")}</p>
-          ) : projects.length === 0 ? (
+          {documents.length === 0 ? (
             <div className="r-empty">
-              <span className="r-empty-icon">📁</span>
-              <p className="r-empty-title">{t("no_projects_title")}</p>
-              <p className="r-empty-desc">{t("no_projects_desc")}</p>
+              <span className="r-empty-icon">📄</span>
+              <p className="r-empty-title">{t("no_docs_title")}</p>
+              <p className="r-empty-desc">{t("no_docs_desc")}</p>
             </div>
           ) : (
-            <div className="r-project-grid">
-              {projects.map((p) => (
-                <Link key={p.id} to={`/projects/${p.id}`} className="r-project-card">
-                  <div>
-                    <p className="r-project-name">{p.title}</p>
-                    {p.client_name && <p className="r-project-client">{p.client_name}</p>}
-                  </div>
-                  <div className="r-project-footer">
-                    <span className={`r-pill ${p.status === "active" ? "active" : "archived"}`}>
-                      {t(`status_${p.status}`)}
-                    </span>
-                    <span className="r-project-arrow">→</span>
-                  </div>
-                </Link>
+            <div className="r-doc-list">
+              {documents.map((doc) => (
+                <div key={doc.id} className="r-doc-row">
+                  <SourceIcon source={doc.source} />
+                  <span className="r-doc-title">{doc.title || t("untitled_document")}</span>
+                  <span className={statusPillClass(doc.indexing_status)}>
+                    {t(doc.indexing_status === "done" ? "indexed"
+                      : doc.indexing_status === "error" ? "error"
+                      : "indexing")}
+                  </span>
+                </div>
               ))}
             </div>
           )}
         </div>
-
-        {/* All documents */}
-        {!loading && (
-          <div className="r-section">
-            <div className="r-section-header">
-              <p className="r-section-label">{t("all_documents")}</p>
-              {emailCount > 0 && (
-                <button className="r-btn-filter" onClick={toggleEmails}>
-                  {showEmails ? t("hide_emails") : t("show_emails")} ({emailCount})
-                </button>
-              )}
-            </div>
-
-            {documents.length === 0 ? (
-              <div className="r-empty">
-                <span className="r-empty-icon">📄</span>
-                <p className="r-empty-title">{t("no_docs_title")}</p>
-                <p className="r-empty-desc">{t("no_docs_desc")}</p>
-              </div>
-            ) : (
-              <div className="r-doc-list">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="r-doc-row">
-                    <SourceIcon source={doc.source} />
-                    <span className="r-doc-title">{doc.title || t("untitled_document")}</span>
-                    <span className={statusPillClass(doc.indexing_status)}>
-                      {t(doc.indexing_status === "done" ? "indexed"
-                        : doc.indexing_status === "error" ? "error"
-                        : "indexing")}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-    </div>
+      )}
+    </main>
   );
 }

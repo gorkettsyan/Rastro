@@ -169,5 +169,6 @@
   "comparing_progress": "Analyzing {{current}} of {{total}} documents...",
   "hint_clause_comparison": "Search for a clause type to compare it across all your contracts. Select documents to see them side by side, or export the results.",
   "all_projects": "All projects",
-  "close": "Close"
+  "close": "Close",
+  "summary_translated": "Summary translated from original source"
 }

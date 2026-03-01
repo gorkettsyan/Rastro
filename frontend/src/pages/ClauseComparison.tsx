@@ -280,7 +280,12 @@ export default function ClauseComparison() {
                       {r.confidence === "high" ? t("confidence_high") : t("confidence_low")}
                     </span>
                   </div>
-                  {r.summary && <p className="r-clause-summary">{r.summary}</p>}
+                  {r.summary && (
+                    <>
+                      <p className="r-clause-summary">{r.summary}</p>
+                      <p className="r-clause-translated-note">{t("summary_translated")}</p>
+                    </>
+                  )}
                   {r.clause_text && (
                     <>
                       <button

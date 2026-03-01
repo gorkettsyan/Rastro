@@ -205,6 +205,7 @@ body {
 .r-page { min-height: 100vh; background: var(--bg-page); }
 
 .r-main {
+  width: 100%;
   max-width: 960px;
   margin: 0 auto;
   padding: var(--space-xl) var(--space-xl) var(--space-2xl);
@@ -1442,6 +1443,13 @@ body {
   color: var(--ink-secondary);
   line-height: 1.6;
   margin: var(--space-sm) 0 0 0;
+}
+
+.r-clause-translated-note {
+  font-size: 11px;
+  color: var(--ink-muted);
+  font-style: italic;
+  margin: 2px 0 0 0;
 }
 
 .r-clause-text {

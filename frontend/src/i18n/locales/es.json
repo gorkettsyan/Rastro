@@ -169,5 +169,6 @@
   "comparing_progress": "Analizando {{current}} de {{total}} documentos...",
   "hint_clause_comparison": "Busca un tipo de cláusula para compararla en todos tus contratos. Selecciona documentos para verlos lado a lado, o exporta los resultados.",
   "all_projects": "Todos los proyectos",
-  "close": "Cerrar"
+  "close": "Cerrar",
+  "summary_translated": "Resumen traducido del documento original"
 }

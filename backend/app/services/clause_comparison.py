@@ -73,66 +73,87 @@ class ClauseComparisonService:
 
         # 2. Embed the clause query
         query_vector = await rag_service._embed_query(query)
+        vector_str = "[" + ",".join(str(v) for v in query_vector) + "]"
 
-        # 3. Vector search across all visible chunks (high limit)
-        chunks = await rag_service._vector_search(
-            db, org_id, query_vector, project_id, limit=100, user_id=user_id
-        )
-
-        # 4. Group chunks by document_id
+        # 3. For each document, retrieve the top 5 most relevant chunks
+        #    (no score threshold — GPT-4o decides if the clause is present)
         chunks_by_doc: dict[uuid.UUID, list[dict]] = {}
-        for chunk in chunks:
-            doc_id = chunk["document_id"]
-            if doc_id not in chunks_by_doc:
-                chunks_by_doc[doc_id] = []
-            chunks_by_doc[doc_id].append(chunk)
 
-        # 5. Fetch adjacent chunks for matched documents
-        for doc_id, doc_chunks in list(chunks_by_doc.items()):
-            chunk_ids = [c["chunk_id"] for c in doc_chunks]
-            if not chunk_ids:
-                continue
-            placeholders = ", ".join(f"CAST(:cid_{i} AS uuid)" for i in range(len(chunk_ids)))
-            adj_sql = text(f"""
-                SELECT c.id, c.content, c.document_id, c.chunk_index
+        for doc_row in all_docs:
+            doc_id = doc_row.id
+            chunk_sql = text("""
+                SELECT
+                    c.id,
+                    c.content,
+                    c.chunk_index,
+                    1 - (c.embedding <=> CAST(:embedding AS vector)) AS score
                 FROM chunks c
                 WHERE c.document_id = CAST(:doc_id AS uuid)
-                  AND c.id NOT IN ({placeholders})
-                  AND c.chunk_index IN (
-                    SELECT ci.chunk_index + 1 FROM chunks ci WHERE ci.id IN ({placeholders})
-                    UNION
-                    SELECT ci.chunk_index - 1 FROM chunks ci WHERE ci.id IN ({placeholders})
-                  )
-                ORDER BY c.chunk_index
+                  AND c.embedding IS NOT NULL
+                ORDER BY c.embedding <=> CAST(:embedding AS vector)
+                LIMIT 5
             """)
-            adj_params: dict = {"doc_id": str(doc_id)}
-            for i, cid in enumerate(chunk_ids):
-                adj_params[f"cid_{i}"] = cid
             try:
-                adj_result = await db.execute(adj_sql, adj_params)
-                for row in adj_result.fetchall():
-                    doc_chunks.append({
-                        "chunk_id": str(row.id),
-                        "content": row.content,
-                        "document_id": row.document_id,
-                        "score": 0.0,
-                        "title": doc_map[doc_id].title if doc_id in doc_map else "",
-                        "source": doc_map[doc_id].source if doc_id in doc_map else "",
-                        "source_url": doc_map[doc_id].source_url if doc_id in doc_map else None,
-                        "retrieval": "adjacent",
-                    })
+                chunk_result = await db.execute(
+                    chunk_sql, {"embedding": vector_str, "doc_id": str(doc_id)}
+                )
+                rows = chunk_result.fetchall()
+                if rows:
+                    doc_chunks: list[dict] = []
+                    fetched_indices = set()
+                    for row in rows:
+                        doc_chunks.append({
+                            "chunk_id": str(row.id),
+                            "content": row.content,
+                            "document_id": doc_id,
+                            "score": float(row.score),
+                            "chunk_index": row.chunk_index,
+                            "title": doc_row.title,
+                            "source": doc_row.source,
+                            "source_url": doc_row.source_url,
+                        })
+                        fetched_indices.add(row.chunk_index)
+
+                    # Fetch adjacent chunks (chunk_index ± 1) for context
+                    adjacent_indices = set()
+                    for idx in fetched_indices:
+                        adjacent_indices.add(idx - 1)
+                        adjacent_indices.add(idx + 1)
+                    adjacent_indices -= fetched_indices  # don't re-fetch
+
+                    if adjacent_indices:
+                        placeholders = ", ".join(str(int(i)) for i in adjacent_indices if i >= 0)
+                        if placeholders:
+                            adj_sql = text(f"""
+                                SELECT c.id, c.content, c.chunk_index
+                                FROM chunks c
+                                WHERE c.document_id = CAST(:doc_id AS uuid)
+                                  AND c.chunk_index IN ({placeholders})
+                            """)
+                            adj_result = await db.execute(adj_sql, {"doc_id": str(doc_id)})
+                            for adj_row in adj_result.fetchall():
+                                doc_chunks.append({
+                                    "chunk_id": str(adj_row.id),
+                                    "content": adj_row.content,
+                                    "document_id": doc_id,
+                                    "score": 0.0,
+                                    "chunk_index": adj_row.chunk_index,
+                                    "title": doc_row.title,
+                                    "source": doc_row.source,
+                                    "source_url": doc_row.source_url,
+                                })
+
+                    chunks_by_doc[doc_id] = doc_chunks
             except Exception as e:
-                log.warning("Adjacent chunk fetch failed for doc %s: %s", doc_id, e)
+                log.warning("Chunk retrieval failed for doc %s: %s", doc_id, e)
 
         total = len(all_docs)
         yield f"data: {json.dumps({'type': 'status', 'total': total})}\n\n"
 
-        # 6. Process each document with matching chunks via GPT-4o
-        docs_with_results = set(chunks_by_doc.keys())
-        current = 0
-
+        # 4. Process each document via GPT-4o
         lang_instruction = _LANG_INSTRUCTIONS.get(language, _LANG_INSTRUCTIONS["en"])
         prompt = EXTRACTION_PROMPT.format(query=query, lang_instruction=lang_instruction)
+        current = 0
 
         for doc_id, doc_chunks in chunks_by_doc.items():
             current += 1
@@ -140,7 +161,7 @@ class ClauseComparisonService:
             if not doc_info:
                 continue
 
-            # Sort by score descending, take top 10 chunks
+            # Sort by chunk_index for coherent reading order, but keep top-scored first
             sorted_chunks = sorted(doc_chunks, key=lambda c: c.get("score", 0), reverse=True)[:10]
             doc_text = "\n\n".join(
                 f"[CHUNK {i}]\n{c['content']}" for i, c in enumerate(sorted_chunks)
@@ -170,13 +191,13 @@ class ClauseComparisonService:
                 log.error("Clause extraction failed for doc %s: %s", doc_id, e)
                 yield f"data: {json.dumps({'type': 'result', 'data': {'document_id': str(doc_id), 'title': doc_info.title, 'project_id': str(doc_info.project_id) if doc_info.project_id else None, 'found': False, 'clause_text': None, 'summary': None, 'confidence': 'low', 'chunk_id': None, 'source': doc_info.source, 'source_url': doc_info.source_url}})}\n\n"
 
-        # 7. Emit missing documents (no matching chunks at all)
+        # 5. Emit documents that had no chunks retrieved
         for doc_id in doc_map:
-            if doc_id not in docs_with_results:
+            if doc_id not in chunks_by_doc:
                 doc_info = doc_map[doc_id]
                 yield f"data: {json.dumps({'type': 'missing', 'document_id': str(doc_id), 'title': doc_info.title})}\n\n"
 
-        # 8. Done
+        # 6. Done
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     def generate_docx(self, query: str, results: list[dict], missing: list[dict], language: str = "es") -> BytesIO:

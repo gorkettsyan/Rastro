@@ -29,6 +29,8 @@ dependencies = [
     "google-auth-oauthlib==1.2.1",
     # PRD 4
     "cohere==5.11.0",
+    # Clause comparison
+    "fpdf2>=2.8",
 ]
 
 [project.optional-dependencies]

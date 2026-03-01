@@ -12,6 +12,7 @@ import Integrations from "./pages/Integrations";
 import Settings from "./pages/Settings";
 import InviteAccept from "./pages/InviteAccept";
 import Obligations from "./pages/Obligations";
+import ClauseComparison from "./pages/ClauseComparison";
 import ToastContainer from "./components/ToastContainer";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/chat/:conversationId" element={<PrivateRoute><Chat /></PrivateRoute>} />
           <Route path="/obligations" element={<PrivateRoute><Obligations /></PrivateRoute>} />
+          <Route path="/clause-comparison" element={<PrivateRoute><ClauseComparison /></PrivateRoute>} />
           <Route path="/memory" element={<PrivateRoute><MemoryPage /></PrivateRoute>} />
           <Route path="/integrations" element={<PrivateRoute><Integrations /></PrivateRoute>} />
           <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />

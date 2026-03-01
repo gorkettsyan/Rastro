@@ -135,10 +135,10 @@ export default function Dashboard() {
 
       {!loading && (
         <div className="r-stats-row">
-          <Link to="/projects" className="r-stat-card">
+          <a href="#documents" className="r-stat-card">
             <span className="r-stat-number">{documents.length}</span>
             <span className="r-stat-label">{t("stats_documents")}</span>
-          </Link>
+          </a>
           <Link to="/obligations" className="r-stat-card">
             <span className="r-stat-number">{obligationCount}</span>
             <span className="r-stat-label">{t("stats_obligations")}</span>
@@ -191,7 +191,7 @@ export default function Dashboard() {
 
       {/* All documents */}
       {!loading && (
-        <div className="r-section">
+        <div id="documents" className="r-section">
           <div className="r-section-header">
             <p className="r-section-label">{t("all_documents")}</p>
             {emailCount > 0 && (

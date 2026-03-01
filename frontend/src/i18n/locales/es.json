@@ -126,5 +126,7 @@
   "view_source": "Ver fuente",
   "obligation_description": "Descripción",
   "add_obligation": "Añadir obligación",
-  "extracted_from": "Extraído de"
+  "extracted_from": "Extraído de",
+  "scan_documents": "Escanear documentos",
+  "scanning": "Escaneando..."
 }

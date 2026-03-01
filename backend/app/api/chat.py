@@ -31,6 +31,13 @@ _openai = AsyncOpenAI(api_key=settings.openai_api_key)
 
 HISTORY_LIMIT = 20
 
+_INTENT_PROMPT = (
+    "Classify this user message as either 'search' or 'chat'.\n"
+    "'search' = the user wants information from documents, contracts, files, or data.\n"
+    "'chat' = casual conversation, greetings, thanks, small talk, or meta-questions about the assistant.\n"
+    "Respond with a single word: search or chat."
+)
+
 _CHAT_SYSTEM_PROMPT_BASE = (
     "You are an expert assistant that helps users find information in their organization's documents. "
     "You have persistent memory across conversations. The '[What I remember about this user]' section below "
@@ -159,26 +166,46 @@ async def send_message(
         )
         history = list(reversed(history_result.scalars().all()))
 
-        # 3. RAG retrieval — enrich short follow-up queries with recent context
-        retrieval_query = body.message
-        if history and len(body.message.split()) < 5:
-            last_assistant = next(
-                (m for m in reversed(history) if m.role == "assistant"), None
+        # 3. Classify intent — skip RAG for casual conversation
+        needs_search = True
+        try:
+            intent_resp = await _openai.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": _INTENT_PROMPT},
+                    {"role": "user", "content": body.message},
+                ],
+                temperature=0,
+                max_tokens=5,
             )
-            if last_assistant:
-                retrieval_query = f"{last_assistant.content[:200]} {body.message}"
+            intent = intent_resp.choices[0].message.content.strip().lower()
+            needs_search = intent != "chat"
+        except Exception:
+            pass  # default to search on failure
 
-        query_vector = await rag_service._embed_query(retrieval_query)
-        chunks = await rag_service._vector_search(
-            db, current_user.org_id, query_vector, conv.project_id,
-            user_id=current_user.id,
-        )
-        context = rag_service._build_context(chunks)
+        # 4. RAG retrieval (only if the message needs document context)
+        chunks = []
+        context = ""
+        if needs_search:
+            retrieval_query = body.message
+            if history and len(body.message.split()) < 5:
+                last_assistant = next(
+                    (m for m in reversed(history) if m.role == "assistant"), None
+                )
+                if last_assistant:
+                    retrieval_query = f"{last_assistant.content[:200]} {body.message}"
 
-        # 4. Fetch memories
+            query_vector = await rag_service._embed_query(retrieval_query)
+            chunks = await rag_service._vector_search(
+                db, current_user.org_id, query_vector, conv.project_id,
+                user_id=current_user.id,
+            )
+            context = rag_service._build_context(chunks)
+
+        # 5. Fetch memories
         memory_block = await memory_extractor_service.get_memories_for_prompt(db, current_user.id, current_query=body.message)
 
-        # 5. Build messages array for GPT-4o
+        # 6. Build messages array for GPT-4o
         system_content = _make_chat_system_prompt(body.language) + memory_block
         gpt_messages = [{"role": "system", "content": system_content}]
 
@@ -188,7 +215,7 @@ async def send_message(
         current_content = f"{context}\n\n{body.message}" if context else body.message
         gpt_messages.append({"role": "user", "content": current_content})
 
-        # 6. Stream GPT-4o
+        # 7. Stream GPT-4o
         stream = await _openai.chat.completions.create(
             model="gpt-4o",
             messages=gpt_messages,
@@ -204,7 +231,7 @@ async def send_message(
                 full_response += delta
                 yield f"data: {json.dumps({'type': 'token', 'content': delta})}\n\n"
 
-        # 7. Emit sources
+        # 8. Emit sources
         sources = [
             {
                 "document_id": str(c["document_id"]),
@@ -219,7 +246,7 @@ async def send_message(
         yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
-        # 8. Save assistant message
+        # 9. Save assistant message
         assistant_msg = Message(
             conversation_id=conversation_id,
             role="assistant",
@@ -228,12 +255,12 @@ async def send_message(
         )
         db.add(assistant_msg)
 
-        # 9. Update conversation timestamp
+        # 10. Update conversation timestamp
         conv.updated_at = datetime.now(timezone.utc)
 
         await db.commit()
 
-        # 10. Enqueue memory extraction and message embedding
+        # 11. Enqueue memory extraction and message embedding
         queue_service.enqueue({
             "job_type": "extract_memories",
             "user_id": str(current_user.id),

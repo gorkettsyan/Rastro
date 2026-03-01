@@ -8,6 +8,7 @@ from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.document import Document
 from app.models.obligation import Obligation
+from app.worker.queue import queue_service
 from app.models.project_member import ProjectMember
 from app.models.user import User
 from app.schemas.obligation import (
@@ -201,3 +202,52 @@ async def delete_obligation(
     if not ob:
         raise HTTPException(status_code=404, detail="Obligation not found")
     await db.delete(ob)
+
+
+@router.post("/scan/{document_id}", status_code=202)
+async def scan_document(
+    document_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Enqueue obligation extraction for a single document."""
+    result = await db.execute(
+        select(Document).where(
+            Document.id == document_id,
+            Document.org_id == current_user.org_id,
+            Document.indexing_status == "done",
+        )
+    )
+    doc = result.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found or not indexed")
+    queue_service.enqueue({
+        "job_type": "extract_dates",
+        "document_id": str(doc.id),
+        "org_id": str(doc.org_id),
+    })
+    return {"status": "queued", "document_id": str(doc.id)}
+
+
+@router.post("/scan", status_code=202)
+async def scan_all_documents(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Backfill: enqueue obligation extraction for all indexed documents in the org."""
+    result = await db.execute(
+        select(Document).where(
+            Document.org_id == current_user.org_id,
+            Document.indexing_status == "done",
+        )
+    )
+    docs = result.scalars().all()
+    count = 0
+    for doc in docs:
+        queue_service.enqueue({
+            "job_type": "extract_dates",
+            "document_id": str(doc.id),
+            "org_id": str(doc.org_id),
+        })
+        count += 1
+    return {"status": "queued", "documents": count}

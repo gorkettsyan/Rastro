@@ -51,7 +51,7 @@ class DateExtractorService:
 
         try:
             response = await self._openai.chat.completions.create(
-                model="gpt-4o",
+                model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": EXTRACTION_PROMPT},
                     {"role": "user", "content": doc_text},

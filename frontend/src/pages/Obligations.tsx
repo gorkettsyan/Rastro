@@ -64,6 +64,7 @@ export default function Obligations() {
   const [newType, setNewType] = useState("other");
   const [newDueDate, setNewDueDate] = useState("");
   const [newProjectId, setNewProjectId] = useState("");
+  const [scanning, setScanning] = useState(false);
 
   const fetchObligations = async () => {
     const params: Record<string, string> = {};
@@ -98,6 +99,17 @@ export default function Obligations() {
     fetchObligations();
   };
 
+  const scanAll = async () => {
+    setScanning(true);
+    try {
+      const res = await api.post("/obligations/scan");
+      // Refetch after a short delay to let the worker process
+      setTimeout(() => fetchObligations(), 5000);
+      alert(`Scanning ${res.data.documents} documents for obligations...`);
+    } catch { /* empty */ }
+    setScanning(false);
+  };
+
   const createObligation = async () => {
     if (!newDesc.trim()) return;
     await api.post("/obligations", {
@@ -121,9 +133,14 @@ export default function Obligations() {
         <div className="r-section">
           <div className="r-section-header">
             <p className="r-page-title">{t("obligations")}</p>
-            <button className="r-btn-primary" onClick={() => setShowModal(true)}>
-              + {t("add_obligation")}
-            </button>
+            <div style={{ display: "flex", gap: "var(--space-sm)" }}>
+              <button className="r-btn-ghost" onClick={scanAll} disabled={scanning}>
+                {scanning ? t("scanning") : t("scan_documents")}
+              </button>
+              <button className="r-btn-primary" onClick={() => setShowModal(true)}>
+                + {t("add_obligation")}
+              </button>
+            </div>
           </div>
 
           <div className="r-filter-bar">

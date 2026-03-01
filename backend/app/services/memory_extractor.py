@@ -138,46 +138,40 @@ class MemoryExtractorService:
     ) -> str:
         """
         Returns formatted memory block for system prompt injection.
-        Part 1: extracted facts about the user (always included).
+        Part 1: extracted facts about the user (ALWAYS included — no filtering).
         Part 2: semantically relevant past exchanges (when current_query provided).
         Returns empty string if no data found.
         """
         parts = []
 
+        # Part 1: Always inject user memories. Cap at ~2000 chars (~500 tokens)
+        # to avoid crowding out document fragments in the context window.
+        # Most recent memories first; stop adding when budget is exhausted.
+        MEMORY_CHAR_BUDGET = 2000
+        mem_result = await db.execute(
+            select(Memory)
+            .where(Memory.user_id == user_id)
+            .order_by(Memory.created_at.desc())
+            .limit(50)
+        )
+        memories = mem_result.scalars().all()
+        if memories:
+            lines = []
+            used = 0
+            for m in memories:
+                line = f"- {m.content}"
+                if used + len(line) > MEMORY_CHAR_BUDGET:
+                    break
+                lines.append(line)
+                used += len(line)
+            parts.append(f"[What I remember about this user]\n" + "\n".join(lines))
+            log.info(f"Injected {len(lines)}/{len(memories)} memories for user {user_id} ({used} chars)")
+
+        # Part 2: Semantically relevant past exchanges (only when query provided)
         if current_query:
             try:
                 query_embeddings = await self._embedding_svc.embed_texts([current_query])
                 vector_str = "[" + ",".join(str(v) for v in query_embeddings[0]) + "]"
-
-                # Fetch only memories that are semantically relevant to the current query.
-                # This prevents unrelated memories from being combined by the model.
-                mem_sql = text("""
-                    SELECT content,
-                           1 - (embedding <=> CAST(:embedding AS vector)) AS score
-                    FROM memories
-                    WHERE user_id = :user_id
-                      AND embedding IS NOT NULL
-                    ORDER BY embedding <=> CAST(:embedding AS vector)
-                    LIMIT 5
-                """)
-                async with db.begin_nested():
-                    mem_result = await db.execute(
-                        mem_sql, {"user_id": str(user_id), "embedding": vector_str}
-                    )
-                    mem_rows = mem_result.fetchall()
-
-                # Only include memories with meaningful similarity (score > 0.5)
-                relevant_memories = [r for r in mem_rows if r.score > 0.5]
-
-                log.info(
-                    f"Memories: {len(mem_rows)} candidates, {len(relevant_memories)} relevant "
-                    f"for user {user_id}. Scores: "
-                    + ", ".join(f"{r.score:.2f}" for r in mem_rows[:5])
-                )
-
-                if relevant_memories:
-                    lines = "\n".join(f"- {r.content}" for r in relevant_memories)
-                    parts.append(f"[What I remember about this user]\n{lines}")
 
                 past_sql = text("""
                     SELECT
@@ -231,7 +225,7 @@ class MemoryExtractorService:
                 quality_rows = [r for r in unique_rows if 0.55 < r.score < 0.88]
                 log.info(
                     f"Past exchanges after quality filter: {len(quality_rows)}/{len(unique_rows)} kept "
-                    f"(thresholds 0.55–0.88)"
+                    f"(thresholds 0.55-0.88)"
                 )
 
                 if quality_rows:
@@ -243,30 +237,7 @@ class MemoryExtractorService:
                             lines.append(f"- {row.answer[:300]}")
                     parts.append("[Relevant past exchanges]\n" + "\n".join(lines))
             except Exception as e:
-                log.warning(f"Memory/exchange retrieval failed: {e}")  # pgvector unavailable or embed failed
-                # Fallback: inject most recent memories without semantic filtering
-                fallback = await db.execute(
-                    select(Memory)
-                    .where(Memory.user_id == user_id)
-                    .order_by(Memory.created_at.desc())
-                    .limit(10)
-                )
-                memories = fallback.scalars().all()
-                if memories:
-                    lines = "\n".join(f"- {m.content}" for m in memories)
-                    parts.append(f"[What I remember about this user]\n{lines}")
-        else:
-            # No query available — inject most recent memories without semantic filtering
-            fallback = await db.execute(
-                select(Memory)
-                .where(Memory.user_id == user_id)
-                .order_by(Memory.created_at.desc())
-                .limit(10)
-            )
-            memories = fallback.scalars().all()
-            if memories:
-                lines = "\n".join(f"- {m.content}" for m in memories)
-                parts.append(f"[What I remember about this user]\n{lines}")
+                log.warning(f"Past exchange retrieval failed: {e}")
 
         if not parts:
             return ""

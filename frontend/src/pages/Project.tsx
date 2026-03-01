@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import { toast } from "../store/toast";
 import Header from "../components/Header";
 import SearchBar from "../components/SearchBar";
 import SearchResult from "../components/SearchResult";
@@ -72,9 +73,9 @@ export default function Project() {
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 409) {
-        alert(t("duplicate_file"));
+        toast.error(t("duplicate_file"));
       } else {
-        alert(t("error"));
+        toast.error(t("error"));
       }
     } finally {
       setUploading(false);

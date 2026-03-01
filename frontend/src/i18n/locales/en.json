@@ -130,5 +130,6 @@
   "scan_documents": "Scan documents",
   "scanning": "Scanning...",
   "duplicate_file": "This file has already been uploaded.",
-  "duplicate_file_name": "A file with this name already exists."
+  "duplicate_file_name": "A file with this name already exists.",
+  "scanning_documents": "Scanning {{count}} documents for obligations..."
 }

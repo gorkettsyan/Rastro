@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import { toast } from "../store/toast";
 import Header from "../components/Header";
 
 interface Obligation {
@@ -105,7 +106,7 @@ export default function Obligations() {
       const res = await api.post("/obligations/scan");
       // Refetch after a short delay to let the worker process
       setTimeout(() => fetchObligations(), 5000);
-      alert(`Scanning ${res.data.documents} documents for obligations...`);
+      toast.info(t("scanning_documents", { count: res.data.documents }));
     } catch { /* empty */ }
     setScanning(false);
   };

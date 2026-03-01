@@ -12,6 +12,7 @@ import Integrations from "./pages/Integrations";
 import Settings from "./pages/Settings";
 import InviteAccept from "./pages/InviteAccept";
 import Obligations from "./pages/Obligations";
+import ToastContainer from "./components/ToastContainer";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <ToastContainer />
     </QueryClientProvider>
   );
 }

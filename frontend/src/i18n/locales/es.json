@@ -130,5 +130,6 @@
   "scan_documents": "Escanear documentos",
   "scanning": "Escaneando...",
   "duplicate_file": "Este archivo ya fue subido.",
-  "duplicate_file_name": "Ya existe un archivo con este nombre."
+  "duplicate_file_name": "Ya existe un archivo con este nombre.",
+  "scanning_documents": "Escaneando {{count}} documentos..."
 }

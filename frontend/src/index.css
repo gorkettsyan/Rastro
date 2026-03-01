@@ -940,6 +940,88 @@ body {
 .r-pill-role-editor { background: var(--color-success-bg); color: var(--color-success); }
 .r-pill-role-viewer { background: var(--bg-accent-soft);   color: var(--ink-muted); }
 
+/* ── Team member row ── */
+.r-member-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 14px var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.12s;
+}
+.r-member-row:last-child { border-bottom: none; }
+.r-member-row:hover      { background: var(--bg-hover); }
+
+.r-member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.r-member-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.r-member-email {
+  font-size: 12px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Role selector (styled as pill) ── */
+.r-role-select {
+  appearance: none;
+  -webkit-appearance: none;
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 5px 24px 5px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23a8a29e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.r-role-select:hover { border-color: var(--border-strong); }
+.r-role-select:focus { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+
+.r-role-select[data-role="admin"]  { background-color: var(--color-warning-bg); color: var(--color-warning); }
+.r-role-select[data-role="owner"]  { background-color: var(--color-warning-bg); color: var(--color-warning); }
+.r-role-select[data-role="member"] { background-color: var(--color-success-bg); color: var(--color-success); }
+.r-role-select[data-role="editor"] { background-color: var(--color-success-bg); color: var(--color-success); }
+.r-role-select[data-role="viewer"] { background-color: var(--bg-accent-soft);   color: var(--ink-muted); }
+
+/* ── Icon danger button ── */
+.r-btn-icon-danger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.r-btn-icon-danger:hover { background: var(--color-error-bg); color: var(--color-error); }
+
 /* ── Obligation tracker ── */
 .r-obligation-row {
   display: flex;

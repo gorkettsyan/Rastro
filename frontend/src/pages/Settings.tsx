@@ -74,29 +74,30 @@ export default function Settings() {
           {team && team.length > 0 ? (
             <div className="r-doc-list">
               {team.map((m) => (
-                <div key={m.id} className="r-doc-row">
-                  <span className="r-doc-title">
-                    {m.full_name || m.email}
+                <div key={m.id} className="r-member-row">
+                  <div className="r-member-info">
+                    <span className="r-member-name">{m.full_name || m.email}</span>
                     {m.full_name && (
-                      <span style={{ color: "var(--ink-muted)", marginLeft: 8, fontSize: 12 }}>
-                        {m.email}
-                      </span>
+                      <span className="r-member-email">{m.email}</span>
                     )}
-                  </span>
-                  <span className={`r-pill r-pill-role-${m.role}`}>{t(`role_${m.role}`)}</span>
+                  </div>
                   <select
-                    className="r-select"
+                    className="r-role-select"
                     value={m.role}
+                    data-role={m.role}
                     onChange={(e) => roleMutation.mutate({ userId: m.id, role: e.target.value })}
                   >
                     <option value="admin">{t("role_admin")}</option>
                     <option value="member">{t("role_member")}</option>
                   </select>
                   <button
-                    className="r-link-danger"
+                    className="r-btn-icon-danger"
                     onClick={() => removeMutation.mutate(m.id)}
+                    title={t("remove")}
                   >
-                    {t("remove")}
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </button>
                 </div>
               ))}

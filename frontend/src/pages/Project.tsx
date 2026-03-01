@@ -69,6 +69,13 @@ export default function Project() {
     try {
       const { data } = await api.post("/documents/upload", form);
       setDocuments((prev) => [data, ...prev]);
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        alert(t("duplicate_file"));
+      } else {
+        alert(t("error"));
+      }
     } finally {
       setUploading(false);
     }

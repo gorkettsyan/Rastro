@@ -99,7 +99,9 @@ class IngestionService:
         document.chunk_count = len(chunks)
         document.indexing_status = "done"
         document.indexed_at = datetime.now(timezone.utc)
-        document.content_hash = hashlib.sha256(raw_text.encode()).hexdigest()
+        # Only set content_hash if not already set (upload endpoint sets it from raw bytes)
+        if not document.content_hash:
+            document.content_hash = hashlib.sha256(raw_text.encode()).hexdigest()
 
         return len(chunks)
 

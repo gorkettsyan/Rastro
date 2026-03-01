@@ -128,5 +128,7 @@
   "add_obligation": "Add obligation",
   "extracted_from": "Extracted from",
   "scan_documents": "Scan documents",
-  "scanning": "Scanning..."
+  "scanning": "Scanning...",
+  "duplicate_file": "This file has already been uploaded.",
+  "duplicate_file_name": "A file with this name already exists."
 }

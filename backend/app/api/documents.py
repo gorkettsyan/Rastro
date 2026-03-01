@@ -77,6 +77,7 @@ async def upload_document(
     content = await file.read()
     content_hash = hashlib.sha256(content).hexdigest()
 
+    # Check by content hash (exact duplicate)
     existing = await db.execute(
         select(Document).where(
             Document.org_id == current_user.org_id,
@@ -85,6 +86,18 @@ async def upload_document(
     )
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="This file has already been uploaded")
+
+    # Check by filename (same name in same project)
+    name_filter = [
+        Document.org_id == current_user.org_id,
+        Document.title == file.filename,
+        Document.source == "upload",
+    ]
+    if project_id:
+        name_filter.append(Document.project_id == project_id)
+    existing_name = await db.execute(select(Document).where(*name_filter).limit(1))
+    if existing_name.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="A file with this name already exists")
 
     raw_text = ingestion_service.extract_text_from_bytes(content, file.content_type)
 

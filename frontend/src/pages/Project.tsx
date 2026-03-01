@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { toast } from "../store/toast";
@@ -8,6 +8,7 @@ import SearchBar from "../components/SearchBar";
 import SearchResult from "../components/SearchResult";
 import ProjectMembers from "../components/ProjectMembers";
 import { CitedChunk } from "../components/CitationCard";
+import LearningHint from "../components/LearningHint";
 
 interface ProjectData {
   id: string;
@@ -23,6 +24,14 @@ interface Document {
   source: string;
   indexing_status: string;
   chunk_count: number;
+}
+
+interface Obligation {
+  id: string;
+  obligation_type: string;
+  description: string;
+  due_date: string | null;
+  status: string;
 }
 
 interface SearchState {
@@ -44,6 +53,7 @@ export default function Project() {
   const { t } = useTranslation();
   const [project, setProject] = useState<ProjectData | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [obligations, setObligations] = useState<Obligation[]>([]);
   const [uploading, setUploading] = useState(false);
   const [searchState, setSearchState] = useState<SearchState | null>(null);
 
@@ -52,10 +62,12 @@ export default function Project() {
     Promise.all([
       api.get(`/projects/${id}`),
       api.get(`/documents?project_id=${id}`),
+      api.get(`/obligations?project_id=${id}&status=open`),
     ])
-      .then(([p, d]) => {
+      .then(([p, d, o]) => {
         setProject(p.data);
         setDocuments(d.data.items);
+        setObligations(o.data.items ?? []);
       })
       .catch(() => navigate("/"));
   }, [id]);
@@ -100,9 +112,14 @@ export default function Project() {
       <Header />
 
       <main className="r-main">
+        <LearningHint textKey="hint_project" />
+
         {/* Project header */}
         <div>
-          <h2 className="r-page-title">{project.title}</h2>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <h2 className="r-page-title">{project.title}</h2>
+            <Link to={`/chat?project=${id}`} className="r-btn-ghost">{t("ask_about_project")}</Link>
+          </div>
           {project.client_name && (
             <p style={{ fontSize: "14px", color: "var(--ink-secondary)", marginTop: "var(--space-xs)" }}>
               {project.client_name}
@@ -158,6 +175,40 @@ export default function Project() {
                       : doc.indexing_status === "error" ? "error"
                       : "indexing")}
                   </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Obligations */}
+        <div className="r-section">
+          <div className="r-section-header">
+            <p className="r-section-label">{t("project_obligations")}</p>
+            {obligations.length > 0 && (
+              <Link to="/obligations" className="r-btn-ghost" style={{ padding: "6px 12px" }}>
+                {t("view_all")} →
+              </Link>
+            )}
+          </div>
+          {obligations.length === 0 ? (
+            <div className="r-empty">
+              <p className="r-empty-title">{t("no_project_obligations")}</p>
+              <p className="r-empty-desc">{t("no_project_obligations_desc")}</p>
+            </div>
+          ) : (
+            <div className="r-doc-list">
+              {obligations.slice(0, 5).map((ob) => (
+                <div key={ob.id} className="r-doc-row">
+                  <span className={`r-pill ${ob.obligation_type === "other" ? "" : "active"}`}>
+                    {t(`type_${ob.obligation_type}`)}
+                  </span>
+                  <span className="r-doc-title">{ob.description}</span>
+                  {ob.due_date && (
+                    <span style={{ fontSize: "12px", color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
+                      {new Date(ob.due_date).toLocaleDateString()}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>

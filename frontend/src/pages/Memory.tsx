@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import Header from "../components/Header";
+import LearningHint from "../components/LearningHint";
 
 interface Memory {
   id: string;
@@ -56,6 +57,8 @@ export default function MemoryPage() {
       <Header />
 
       <main className="r-main" style={{ maxWidth: "680px" }}>
+        <LearningHint textKey="hint_memory" />
+
         <div className="r-section-header" style={{ marginBottom: "var(--space-xs)" }}>
           <p className="r-page-title">🧠 {t("memories")}</p>
           {memories.length > 0 && (

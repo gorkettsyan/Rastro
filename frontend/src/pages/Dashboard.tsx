@@ -8,6 +8,7 @@ import SearchBar from "../components/SearchBar";
 import SearchResult from "../components/SearchResult";
 import { CitedChunk } from "../components/CitationCard";
 import UpcomingObligations from "../components/UpcomingObligations";
+import LearningHint from "../components/LearningHint";
 
 interface Project {
   id: string;
@@ -72,6 +73,8 @@ export default function Dashboard() {
   const [searchState, setSearchState] = useState<SearchState | null>(null);
   const [showEmails, setShowEmails] = useState(false);
   const [emailCount, setEmailCount] = useState(0);
+  const [obligationCount, setObligationCount] = useState(0);
+  const [memoryCount, setMemoryCount] = useState(0);
 
   const fetchDocuments = async (includeEmails: boolean) => {
     const params: Record<string, string> = {};
@@ -87,14 +90,18 @@ export default function Dashboard() {
           const { data } = await api.get("/auth/me");
           setUser(data);
         }
-        const [projectsRes, docsRes, emailRes] = await Promise.all([
+        const [projectsRes, docsRes, emailRes, obligationsRes, memoryRes] = await Promise.all([
           api.get("/projects"),
           api.get("/documents"),
           api.get("/documents", { params: { source: "gmail", include_emails: "true" } }),
+          api.get("/obligations", { params: { status: "open" } }),
+          api.get("/memory"),
         ]);
         setProjects(projectsRes.data.items);
         setDocuments(docsRes.data.items);
         setEmailCount(emailRes.data.total);
+        setObligationCount(obligationsRes.data.items?.length ?? 0);
+        setMemoryCount(memoryRes.data.items?.length ?? 0);
       } catch {
         navigate("/login");
       } finally {
@@ -115,6 +122,8 @@ export default function Dashboard() {
       <Header />
 
       <main className="r-main">
+        <LearningHint textKey="hint_dashboard" />
+
         {/* Global search */}
         <div>
           <SearchBar onResult={setSearchState} />
@@ -127,6 +136,23 @@ export default function Dashboard() {
             />
           )}
         </div>
+
+        {!loading && (
+          <div className="r-stats-row">
+            <Link to="/projects" className="r-stat-card">
+              <span className="r-stat-number">{documents.length}</span>
+              <span className="r-stat-label">{t("stats_documents")}</span>
+            </Link>
+            <Link to="/obligations" className="r-stat-card">
+              <span className="r-stat-number">{obligationCount}</span>
+              <span className="r-stat-label">{t("stats_obligations")}</span>
+            </Link>
+            <Link to="/memory" className="r-stat-card">
+              <span className="r-stat-number">{memoryCount}</span>
+              <span className="r-stat-label">{t("stats_memories")}</span>
+            </Link>
+          </div>
+        )}
 
         <UpcomingObligations />
 

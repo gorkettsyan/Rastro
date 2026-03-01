@@ -6,6 +6,7 @@ interface User {
   full_name: string | null;
   role: string;
   org_id: string;
+  learning_mode: boolean;
 }
 
 interface AuthState {

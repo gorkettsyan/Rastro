@@ -131,5 +131,22 @@
   "scanning": "Escaneando...",
   "duplicate_file": "Este archivo ya fue subido.",
   "duplicate_file_name": "Ya existe un archivo con este nombre.",
-  "scanning_documents": "Escaneando {{count}} documentos..."
+  "scanning_documents": "Escaneando {{count}} documentos...",
+  "preferences": "Preferencias",
+  "learning_mode": "Modo de aprendizaje",
+  "learning_mode_desc": "Muestra consejos y guías en la app para ayudarte a sacar el máximo provecho de Rastro.",
+  "language_preference": "Idioma",
+  "project_obligations": "Obligaciones",
+  "no_project_obligations": "Sin obligaciones para este proyecto",
+  "no_project_obligations_desc": "Las obligaciones aparecerán aquí cuando se indexen contratos de este proyecto.",
+  "ask_about_project": "Preguntar sobre este proyecto",
+  "stats_documents": "Documentos",
+  "stats_obligations": "Obligaciones",
+  "stats_memories": "Memorias",
+  "hint_dashboard": "Usa la barra de búsqueda para hacer preguntas sobre todos tus documentos. Haz clic en una tarjeta para explorar esa sección.",
+  "hint_project": "Sube documentos a este proyecto y usa la barra de búsqueda para encontrar respuestas solo dentro de este proyecto.",
+  "hint_chat": "Chatea con el asistente sobre tus documentos. Recuerda el contexto de conversaciones anteriores y usa tus memorias.",
+  "hint_memory": "Las memorias ayudan al asistente a personalizar sus respuestas. Se guardan automáticamente de las conversaciones, o puedes añadirlas manualmente.",
+  "hint_obligations": "Las obligaciones son plazos y compromisos extraídos de tus contratos. Usa \"Escanear documentos\" para detectar nuevas.",
+  "hint_settings": "Administra tu equipo y preferencias aquí. Desactiva el modo de aprendizaje para ocultar estos consejos cuando te sientas cómodo."
 }

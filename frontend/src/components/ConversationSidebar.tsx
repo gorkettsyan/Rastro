@@ -5,6 +5,7 @@ interface Conversation {
   id: string;
   title: string | null;
   updated_at: string;
+  project_id: string | null;
 }
 
 interface Props {
@@ -29,6 +30,7 @@ export default function ConversationSidebar({ conversations, onNew }: Props) {
             to={`/chat/${c.id}`}
             className={`r-conv-item${c.id === conversationId ? " active" : ""}`}
           >
+            {c.project_id && <span style={{ marginRight: "4px", opacity: 0.5 }}>📁</span>}
             {c.title || t("new_conversation")}
           </Link>
         ))}

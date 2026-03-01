@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
+import { useAuthStore } from "../store/auth";
 import Header from "../components/Header";
+import LearningHint from "../components/LearningHint";
 
 interface TeamMember {
   id: string;
@@ -20,8 +22,9 @@ interface Invite {
 }
 
 export default function Settings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
+  const { user, setUser } = useAuthStore();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("member");
   const [inviteError, setInviteError] = useState("");
@@ -49,6 +52,12 @@ export default function Settings() {
     },
   });
 
+  const prefsMutation = useMutation({
+    mutationFn: (data: { learning_mode: boolean }) =>
+      api.patch("/auth/me/preferences", data),
+    onSuccess: ({ data }) => setUser(data),
+  });
+
   const removeMutation = useMutation({
     mutationFn: (userId: string) => api.delete(`/team/members/${userId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team"] }),
@@ -65,6 +74,49 @@ export default function Settings() {
       <Header />
       <main className="r-main">
         <h2 className="r-page-title">{t("settings")}</h2>
+
+        <LearningHint textKey="hint_settings" />
+
+        {/* Preferences */}
+        <div className="r-section">
+          <div className="r-section-header">
+            <p className="r-section-label">{t("preferences")}</p>
+          </div>
+          <div className="r-doc-list">
+            <div className="r-preference-row">
+              <div className="r-preference-info">
+                <span className="r-preference-label">{t("learning_mode")}</span>
+                <span className="r-preference-desc">{t("learning_mode_desc")}</span>
+              </div>
+              <button
+                className={`r-toggle${user?.learning_mode ? " active" : ""}`}
+                onClick={() => prefsMutation.mutate({ learning_mode: !user?.learning_mode })}
+                disabled={prefsMutation.isPending}
+              />
+            </div>
+            <div className="r-preference-row">
+              <div className="r-preference-info">
+                <span className="r-preference-label">{t("language_preference")}</span>
+              </div>
+              <div style={{ display: "flex", gap: "var(--space-xs)" }}>
+                <button
+                  className={`r-btn-ghost${i18n.language === "en" ? " active" : ""}`}
+                  onClick={() => { i18n.changeLanguage("en"); localStorage.setItem("rastro_lang", "en"); }}
+                  style={{ padding: "6px 12px" }}
+                >
+                  EN
+                </button>
+                <button
+                  className={`r-btn-ghost${i18n.language === "es" ? " active" : ""}`}
+                  onClick={() => { i18n.changeLanguage("es"); localStorage.setItem("rastro_lang", "es"); }}
+                  style={{ padding: "6px 12px" }}
+                >
+                  ES
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Team roster */}
         <div className="r-section">

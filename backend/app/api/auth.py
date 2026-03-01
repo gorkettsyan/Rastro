@@ -14,7 +14,7 @@ from app.dependencies import get_current_user
 from app.models.integration_token import IntegrationToken
 from app.models.organization import Organization
 from app.models.user import User
-from app.schemas.auth import GoogleLoginResponse, UserOut
+from app.schemas.auth import GoogleLoginResponse, UserOut, UserPreferencesUpdate
 from app.security import create_jwt, encrypt
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -134,4 +134,17 @@ async def google_callback(code: str, state: str | None = None, db: AsyncSession 
 
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)):
+    return UserOut.model_validate(current_user)
+
+
+@router.patch("/me/preferences", response_model=UserOut)
+async def update_preferences(
+    body: UserPreferencesUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if body.learning_mode is not None:
+        current_user.learning_mode = body.learning_mode
+    await db.flush()
+    await db.refresh(current_user)
     return UserOut.model_validate(current_user)

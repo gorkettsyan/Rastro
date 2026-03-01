@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { toast } from "../store/toast";
 import Header from "../components/Header";
+import LearningHint from "../components/LearningHint";
 
 interface Obligation {
   id: string;
@@ -131,6 +132,8 @@ export default function Obligations() {
     <div className="r-page">
       <Header />
       <main className="r-main">
+        <LearningHint textKey="hint_obligations" />
+
         <div className="r-section">
           <div className="r-section-header">
             <p className="r-page-title">{t("obligations")}</p>

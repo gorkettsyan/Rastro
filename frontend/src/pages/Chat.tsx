@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import Header from "../components/Header";
 import ConversationSidebar from "../components/ConversationSidebar";
 import MessageBubble from "../components/MessageBubble";
+import LearningHint from "../components/LearningHint";
 
 interface Conversation {
   id: string;
@@ -33,6 +34,8 @@ export default function Chat() {
   const { conversationId } = useParams<{ conversationId?: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get("project");
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -73,7 +76,7 @@ export default function Chat() {
     let activeConversationId = conversationId;
 
     if (!activeConversationId) {
-      const { data } = await api.post("/chat", { first_message: text });
+      const { data } = await api.post("/chat", { first_message: text, project_id: projectId || undefined });
       activeConversationId = data.id;
       setConversations((prev) => [data, ...prev]);
       navigate(`/chat/${activeConversationId}`, { replace: true });
@@ -148,6 +151,7 @@ export default function Chat() {
 
         <div className="r-chat-area">
           <div className="r-chat-messages">
+            <LearningHint textKey="hint_chat" />
             {messages.length === 0 && !streaming ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center" }}>
                 <p className="r-page-title" style={{ fontSize: "18px", marginBottom: "var(--space-sm)" }}>{t("conversation_empty")}</p>

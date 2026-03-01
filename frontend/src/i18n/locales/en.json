@@ -131,5 +131,22 @@
   "scanning": "Scanning...",
   "duplicate_file": "This file has already been uploaded.",
   "duplicate_file_name": "A file with this name already exists.",
-  "scanning_documents": "Scanning {{count}} documents for obligations..."
+  "scanning_documents": "Scanning {{count}} documents for obligations...",
+  "preferences": "Preferences",
+  "learning_mode": "Learning mode",
+  "learning_mode_desc": "Show tips and guidance throughout the app to help you get the most out of Rastro.",
+  "language_preference": "Language",
+  "project_obligations": "Obligations",
+  "no_project_obligations": "No obligations for this project",
+  "no_project_obligations_desc": "Obligations will appear here when contracts for this project are indexed.",
+  "ask_about_project": "Ask about this project",
+  "stats_documents": "Documents",
+  "stats_obligations": "Obligations",
+  "stats_memories": "Memories",
+  "hint_dashboard": "Use the search bar to ask questions across all your documents. Click a stat card to explore that section.",
+  "hint_project": "Upload documents to this project, then use the search bar to find answers scoped to this project only.",
+  "hint_chat": "Chat with the assistant about your documents. It remembers context from previous conversations and uses your memories.",
+  "hint_memory": "Memories help the assistant personalize responses. They are saved automatically from conversations, or you can add them manually.",
+  "hint_obligations": "Obligations are deadlines and commitments extracted from your contracts. Use \"Scan documents\" to detect new ones.",
+  "hint_settings": "Manage your team and preferences here. Turn off learning mode to hide these tips once you're comfortable."
 }

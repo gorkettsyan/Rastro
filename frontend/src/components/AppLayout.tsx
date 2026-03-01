@@ -1,5 +1,4 @@
-import { Outlet } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../store/auth";
 import Sidebar from "./Sidebar";

@@ -939,3 +939,132 @@ body {
 .r-pill-role-owner  { background: var(--color-warning-bg); color: var(--color-warning); }
 .r-pill-role-editor { background: var(--color-success-bg); color: var(--color-success); }
 .r-pill-role-viewer { background: var(--bg-accent-soft);   color: var(--ink-muted); }
+
+/* ── Obligation tracker ── */
+.r-obligation-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 12px var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.12s;
+}
+.r-obligation-row:last-child { border-bottom: none; }
+.r-obligation-row:hover      { background: var(--bg-hover); }
+.r-obligation-row.warning     { background: var(--color-warning-bg); }
+.r-obligation-row.overdue     { background: var(--color-error-bg); }
+
+.r-pill.due-soon { background: var(--color-warning-bg); color: var(--color-warning); }
+.r-pill.overdue  { background: var(--color-error-bg); color: var(--color-error); }
+.r-pill.on-track { background: var(--color-success-bg); color: var(--color-success); }
+
+.r-upcoming-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-sm);
+}
+.r-upcoming-card .r-section-header { margin-bottom: var(--space-sm); }
+
+.r-upcoming-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.r-upcoming-item:last-child { border-bottom: none; }
+
+.r-upcoming-desc {
+  flex: 1;
+  color: var(--ink-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.r-upcoming-doc {
+  font-size: 12px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.r-filter-bar {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-md);
+}
+
+.r-filter-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 8px var(--space-md);
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--ink-primary);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.r-filter-select:focus { border-color: var(--border-strong); }
+
+.r-obligation-desc {
+  flex: 1;
+  font-size: 14px;
+  color: var(--ink-primary);
+}
+
+.r-obligation-meta {
+  font-size: 12px;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.r-obligation-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+/* ── Add obligation modal ── */
+.r-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.r-modal {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.r-modal-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.r-modal-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}

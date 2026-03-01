@@ -10,9 +10,10 @@ from app.models.message import Message
 from app.models.memory import Memory
 from app.models.invite import Invite
 from app.models.project_member import ProjectMember
+from app.models.obligation import Obligation
 
 __all__ = [
     "Organization", "User", "IntegrationToken", "Project", "Document",
     "Chunk", "SearchLog", "Conversation", "Message", "Memory",
-    "Invite", "ProjectMember",
+    "Invite", "ProjectMember", "Obligation",
 ]

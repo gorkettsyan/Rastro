@@ -76,6 +76,16 @@ async def upload_document(
 
     content = await file.read()
     content_hash = hashlib.sha256(content).hexdigest()
+
+    existing = await db.execute(
+        select(Document).where(
+            Document.org_id == current_user.org_id,
+            Document.content_hash == content_hash,
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="This file has already been uploaded")
+
     raw_text = ingestion_service.extract_text_from_bytes(content, file.content_type)
 
     s3_key = f"{current_user.org_id}/upload/{content_hash}.txt"

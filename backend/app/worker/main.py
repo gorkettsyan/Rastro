@@ -11,6 +11,7 @@ from app.worker.handlers.drive import handle_drive_file
 from app.worker.handlers.gmail import handle_gmail_thread
 from app.worker.handlers.memory import handle_extract_memories
 from app.worker.handlers.message_embedder import handle_embed_message
+from app.worker.handlers.date_extraction import handle_extract_dates
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ HANDLERS = {
     "gmail_thread": handle_gmail_thread,
     "extract_memories": handle_extract_memories,
     "embed_message": handle_embed_message,
+    "extract_dates": handle_extract_dates,
 }
 
 engine = create_async_engine(settings.database_url)

@@ -3,6 +3,7 @@ from sqlalchemy import select
 from app.models.document import Document
 from app.services.ingestion import ingestion_service
 from app.services.storage import storage_service
+from app.worker.queue import queue_service
 
 
 async def handle_manual_upload(body: dict, db: AsyncSession) -> None:
@@ -15,6 +16,11 @@ async def handle_manual_upload(body: dict, db: AsyncSession) -> None:
     try:
         raw_text = storage_service.download_text(doc.file_path)
         await ingestion_service.chunk_and_embed(db, doc, raw_text)
+        queue_service.enqueue({
+            "job_type": "extract_dates",
+            "document_id": str(doc.id),
+            "org_id": str(doc.org_id),
+        })
     except Exception as e:
         doc.indexing_status = "error"
         doc.indexing_error = str(e)[:500]

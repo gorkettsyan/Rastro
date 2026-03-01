@@ -134,6 +134,11 @@ async def handle_gmail_thread(body: dict, db: AsyncSession) -> None:
         doc.title = subject
 
         await ingestion_service.chunk_and_embed(db, doc, raw_text, extra_metadata={"source": "gmail", "thread_id": body["source_id"]})
+        queue_service.enqueue({
+            "job_type": "extract_dates",
+            "document_id": str(doc.id),
+            "org_id": str(doc.org_id),
+        })
     except Exception as e:
         doc.indexing_status = "error"
         doc.indexing_error = str(e)[:500]

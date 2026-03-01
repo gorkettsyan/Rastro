@@ -7,6 +7,7 @@ import Header from "../components/Header";
 import SearchBar from "../components/SearchBar";
 import SearchResult from "../components/SearchResult";
 import { CitedChunk } from "../components/CitationCard";
+import UpcomingObligations from "../components/UpcomingObligations";
 
 interface Project {
   id: string;
@@ -126,6 +127,8 @@ export default function Dashboard() {
             />
           )}
         </div>
+
+        <UpcomingObligations />
 
         {/* Projects */}
         <div className="r-section">

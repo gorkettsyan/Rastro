@@ -58,6 +58,11 @@ async def handle_drive_file(body: dict, db: AsyncSession) -> None:
         doc.file_path = s3_key
 
         await ingestion_service.chunk_and_embed(db, doc, raw_text, extra_metadata={"source": "drive", "file_name": file_meta["name"]})
+        queue_service.enqueue({
+            "job_type": "extract_dates",
+            "document_id": str(doc.id),
+            "org_id": str(doc.org_id),
+        })
     except Exception as e:
         doc.indexing_status = "error"
         doc.indexing_error = str(e)[:500]

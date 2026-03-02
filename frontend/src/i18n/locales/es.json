@@ -217,5 +217,11 @@
   "landing_final_headline": "Empieza a buscar en tus documentos hoy",
   "landing_final_sub": "Configura tu cuenta en menos de 2 minutos. Sin tarjeta de credito.",
   "landing_privacy": "Privacidad",
-  "landing_terms": "Terminos"
+  "landing_terms": "Terminos",
+
+  "source_boe": "BOE",
+  "boe_disclaimer": "Legislación consolidada — puede haber sido actualizada",
+  "boe_disclaimer_full": "Las fuentes del BOE corresponden a legislación consolidada del Boletín Oficial del Estado. Verifica siempre la versión vigente en boe.es antes de tomar decisiones legales.",
+  "boe_law": "Ley",
+  "boe_article": "Artículo"
 }

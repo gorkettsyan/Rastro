@@ -14,6 +14,8 @@ from app.models.search_log import SearchLog
 from app.services.base import BaseEmbeddingService, BaseRerankerService
 from app.services.embeddings import embedding_service
 from app.services.reranker import reranker_service
+from app.services.knowledge_registry import get_plugins
+import app.services.boe_plugin  # noqa: F401 — triggers plugin registration
 
 log = logging.getLogger(__name__)
 
@@ -26,8 +28,14 @@ RRF_K = 60
 _SYSTEM_PROMPT_BASE = (
     "You are an expert assistant that helps users find information in their organization's documents. "
     "Answer ONLY based on the provided fragments. Cite sources using the format [Source N]. "
-    "If you cannot answer with the available information, say so clearly. "
-    "Never invent data or assume information not present in the fragments. "
+    "CRITICAL GROUNDING RULE: You may ONLY reference, quote, or paraphrase content that appears VERBATIM in the provided [Source N] fragments. "
+    "NEVER generate, recall, or reconstruct document content from your own knowledge or training data. "
+    "When you cite [Source N], the information MUST actually appear in that source's text. "
+    "If the relevant clause, article, or section is NOT in the provided sources, you MUST explicitly state: "
+    "'The relevant section was not retrieved in the search results' and suggest the user search with more specific terms. "
+    "Do NOT fabricate or guess what a document might contain. "
+    "Synthesize and apply information from all provided fragments, but ONLY from those fragments. "
+    "Never invent data. "
 )
 
 _LANG_INSTRUCTIONS = {
@@ -37,10 +45,24 @@ _LANG_INSTRUCTIONS = {
 
 _SYSTEM_PROMPT = _SYSTEM_PROMPT_BASE + _LANG_INSTRUCTIONS["en"]
 
+_BOE_CITATION_INSTRUCTION = (
+    "\n\nSome fragments come from the user's private documents and some from Spanish legislation (BOE — Boletín Oficial del Estado). "
+    "When BOTH are present, structure your answer as follows:\n"
+    "1. First, analyze what the user's contract/document specifically says — cite the clause number and quote the key language.\n"
+    "2. Then, explain how the legislation applies to that specific clause — cite the law name and article number.\n"
+    "3. Identify any legal risks, compliance issues, or weak points in the contract clause under the applicable law.\n"
+    "Be specific: cite clause numbers from the contract AND article numbers from the law. "
+    "Do NOT write generic legal summaries — always tie the law back to the user's specific document. "
+    "Add a brief disclaimer that legislation may have been updated."
+)
 
-def _make_system_prompt(language: str) -> str:
+
+def _make_system_prompt(language: str, has_boe_results: bool = False) -> str:
     instruction = _LANG_INSTRUCTIONS.get(language, _LANG_INSTRUCTIONS["en"])
-    return _SYSTEM_PROMPT_BASE + instruction
+    prompt = _SYSTEM_PROMPT_BASE + instruction
+    if has_boe_results:
+        prompt += _BOE_CITATION_INSTRUCTION
+    return prompt
 
 
 _QUERY_REWRITE_PROMPT = (
@@ -239,9 +261,16 @@ class RAGService:
 
     @staticmethod
     def _build_context(chunks: list[dict]) -> str:
-        return "\n\n".join(
-            f"[Source {i}]\n{c['content']}" for i, c in enumerate(chunks, 1)
-        )
+        parts = []
+        for i, c in enumerate(chunks, 1):
+            if c.get("source_type") == "boe" or c.get("source") == "boe":
+                law = c.get("law_name", "")
+                art = c.get("article_number", "")
+                label = f" ({law}, {art})" if law and art else f" ({law})" if law else ""
+                parts.append(f"[Source {i}]{label}\n{c['content']}")
+            else:
+                parts.append(f"[Source {i}]\n{c['content']}")
+        return "\n\n".join(parts)
 
     async def stream_rag_response(
         self,
@@ -283,14 +312,42 @@ class RAGService:
             # 2. Embed
             query_vector = await self._embed_query(rewritten)
 
-            # 3. Parallel retrieval
-            vector_results, bm25_results = await asyncio.gather(
+            # 3. Parallel retrieval (private + plugins)
+            tasks = [
                 self._vector_search(db, org_id, query_vector, project_id, user_id=user_id),
                 self._bm25_search(db, org_id, rewritten, project_id, user_id=user_id),
-            )
+            ]
+            plugins = get_plugins()
+            for plugin in plugins:
+                tasks.append(plugin.vector_search(db, query_vector))
+                tasks.append(plugin.bm25_search(db, rewritten))
 
-            # 4. RRF fusion
-            fused = self._reciprocal_rank_fusion(vector_results, bm25_results)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            vector_results = results[0] if not isinstance(results[0], Exception) else []
+            bm25_results = results[1] if not isinstance(results[1], Exception) else []
+
+            # Collect plugin results
+            plugin_vector_all: list[dict] = []
+            plugin_bm25_all: list[dict] = []
+            for i, plugin in enumerate(plugins):
+                pv_idx = 2 + i * 2
+                pb_idx = 3 + i * 2
+                pv = results[pv_idx] if not isinstance(results[pv_idx], Exception) else []
+                pb = results[pb_idx] if not isinstance(results[pb_idx], Exception) else []
+                if isinstance(pv, Exception):
+                    log.warning("Plugin %s vector search failed: %s", plugin.name, pv)
+                    pv = []
+                if isinstance(pb, Exception):
+                    log.warning("Plugin %s bm25 search failed: %s", plugin.name, pb)
+                    pb = []
+                plugin_vector_all.extend(pv)
+                plugin_bm25_all.extend(pb)
+
+            # 4. RRF fusion (private + plugin results merged)
+            all_vector = vector_results + plugin_vector_all
+            all_bm25 = bm25_results + plugin_bm25_all
+            fused = self._reciprocal_rank_fusion(all_vector, all_bm25)
 
             if not fused:
                 no_results_msg = (
@@ -310,11 +367,12 @@ class RAGService:
             top_chunks = await self._reranker_svc.rerank(query, fused[:50], top_n=TOP_K_RERANK)
 
             # 6. Stream GPT-4o
+            has_boe = any(c.get("source_type") == "boe" or c.get("source") == "boe" for c in top_chunks)
             context = self._build_context(top_chunks)
             stream = await self._openai.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": _make_system_prompt(language)},
+                    {"role": "system", "content": _make_system_prompt(language, has_boe_results=has_boe)},
                     {"role": "user", "content": f"{context}\n\n{query}"},
                 ],
                 stream=True,
@@ -327,18 +385,21 @@ class RAGService:
                 if delta:
                     yield f"data: {json.dumps({'type': 'token', 'content': delta})}\n\n"
 
-            # 7. Sources
-            sources = [
-                {
-                    "document_id": str(c["document_id"]),
-                    "title": c["title"],
-                    "source": c["source"],
-                    "source_url": c["source_url"],
-                    "score": round(c.get("rerank_score", c.get("rrf_score", 0.0)), 3),
-                    "excerpt": c["content"][:200],
-                }
-                for c in top_chunks
-            ]
+            # 7. Sources — use plugin format_source for plugin chunks
+            plugin_map = {p.name: p for p in plugins}
+            sources = []
+            for c in top_chunks:
+                if c.get("source_type") and c["source_type"] in plugin_map:
+                    sources.append(plugin_map[c["source_type"]].format_source(c))
+                else:
+                    sources.append({
+                        "document_id": str(c["document_id"]),
+                        "title": c["title"],
+                        "source": c["source"],
+                        "source_url": c["source_url"],
+                        "score": round(c.get("rerank_score", c.get("rrf_score", 0.0)), 3),
+                        "excerpt": c["content"][:200],
+                    })
             yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 

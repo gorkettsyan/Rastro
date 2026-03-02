@@ -1,0 +1,310 @@
+"""Tests for the BOE Knowledge Plugin."""
+import pytest
+import uuid
+from unittest.mock import AsyncMock, patch, MagicMock
+
+from app.services.boe_client import (
+    _parse_index,
+    _parse_block,
+    _parse_full_text,
+    BoeArticle,
+    BoeLawData,
+)
+from app.services.boe_ingestion import _split_long_article
+from app.services.knowledge_registry import _plugins, register_plugin, get_plugins
+from app.services.knowledge_base import BaseKnowledgePlugin
+from app.services.rag import _make_system_prompt, RAGService
+
+
+# ── 1. XML parsing tests ──
+
+
+SAMPLE_INDEX_XML = """<?xml version="1.0"?>
+<response>
+  <status><code>200</code><text>ok</text></status>
+  <data>
+    <bloque><id>a1</id><titulo>Artículo 1</titulo></bloque>
+    <bloque><id>a2</id><titulo>Artículo 2</titulo></bloque>
+    <bloque><id>ci</id><titulo>CAPÍTULO I</titulo></bloque>
+  </data>
+</response>
+"""
+
+SAMPLE_BLOCK_XML = """<?xml version="1.0"?>
+<response>
+  <status><code>200</code><text>ok</text></status>
+  <data>
+    <bloque id="a1" tipo="precepto" titulo="Artículo 1. De las obligaciones">
+      <version id_norma="BOE-A-1889-4763" fecha_publicacion="18890725">
+        <p class="articulo">Artículo 1. De las obligaciones.</p>
+        <p class="parrafo">Toda obligación consiste en dar, hacer o no hacer alguna cosa.</p>
+        <p class="parrafo">El obligado a dar alguna cosa lo está también a conservarla con la diligencia propia de un buen padre de familia.</p>
+      </version>
+    </bloque>
+  </data>
+</response>
+"""
+
+SAMPLE_BLOCK_SECTION_XML = """<?xml version="1.0"?>
+<response>
+  <status><code>200</code><text>ok</text></status>
+  <data>
+    <bloque id="ci" tipo="estructura" titulo="Capítulo I. Disposiciones generales">
+      <version id_norma="BOE-A-1889-4763" fecha_publicacion="18890725">
+        <p class="parrafo">Este capítulo contiene las disposiciones generales aplicables.</p>
+      </version>
+    </bloque>
+  </data>
+</response>
+"""
+
+SAMPLE_EMPTY_BLOCK_XML = """<?xml version="1.0"?>
+<response>
+  <status><code>200</code><text>ok</text></status>
+  <data>
+    <bloque id="derogado" tipo="precepto" titulo="Artículo derogado">
+    </bloque>
+  </data>
+</response>
+"""
+
+
+def test_parse_index_extracts_block_ids():
+    ids = _parse_index(SAMPLE_INDEX_XML)
+    assert ids == ["a1", "a2", "ci"]
+
+
+def test_parse_index_empty_xml():
+    ids = _parse_index("<response><data></data></response>")
+    assert ids == []
+
+
+def test_parse_index_malformed_xml():
+    ids = _parse_index("not xml at all")
+    assert ids == []
+
+
+def test_parse_block_extracts_article():
+    article = _parse_block(SAMPLE_BLOCK_XML, "BOE-A-1889-4763", "a1")
+    assert article is not None
+    assert article.article_number == "Artículo 1."
+    assert article.block_id == "a1"
+    assert "obligación" in article.content.lower()
+    assert "boe.es" in article.boe_url
+
+
+def test_parse_block_section_title():
+    article = _parse_block(SAMPLE_BLOCK_SECTION_XML, "BOE-A-1889-4763", "ci")
+    assert article is not None
+    assert article.article_number is None
+    assert article.section_title == "Capítulo I. Disposiciones generales"
+
+
+def test_parse_block_empty_returns_none():
+    article = _parse_block(SAMPLE_EMPTY_BLOCK_XML, "BOE-A-1889-4763", "derogado")
+    assert article is None
+
+
+def test_parse_block_malformed_xml():
+    article = _parse_block("not xml", "BOE-A-1889-4763", "BLK-BAD")
+    assert article is None
+
+
+# ── 2. Article chunking tests ──
+
+
+def test_short_article_single_chunk():
+    article = BoeArticle(
+        block_id="BLK-1",
+        article_number="Artículo 1",
+        section_title=None,
+        content="Toda obligación consiste en dar, hacer o no hacer alguna cosa.",
+        boe_url="https://www.boe.es/buscar/act.php?id=BOE-A-1889-4763",
+    )
+    chunks = _split_long_article(article, "CC")
+    assert len(chunks) == 1
+    assert chunks[0]["content"] == article.content
+
+
+def test_long_article_splits_with_header():
+    # Create an article with >512 tokens of content
+    long_text = "Artículo 500\n\n" + ("Esta es una cláusula larga con muchas palabras. " * 200)
+    article = BoeArticle(
+        block_id="BLK-500",
+        article_number="Artículo 500",
+        section_title="Título Preliminar",
+        content=long_text,
+        boe_url="https://www.boe.es/buscar/act.php?id=BOE-A-1889-4763",
+    )
+    chunks = _split_long_article(article, "CC")
+    assert len(chunks) > 1
+    # Second chunk should have the header prepended
+    assert "CC" in chunks[1]["content"]
+
+
+# ── 3. Plugin format tests ──
+
+
+def test_boe_plugin_chunk_id_prefix():
+    from app.services.boe_plugin import BoeKnowledgePlugin
+
+    plugin = BoeKnowledgePlugin()
+    source = plugin.format_source({
+        "chunk_id": "boe:some-uuid",
+        "document_id": "boe:BOE-A-1889-4763",
+        "title": "CC — Artículo 1",
+        "content": "Toda obligación consiste en dar, hacer o no hacer alguna cosa.",
+        "source_url": "https://www.boe.es/buscar/act.php?id=BOE-A-1889-4763",
+        "law_name": "CC",
+        "article_number": "Artículo 1",
+        "boe_id": "BOE-A-1889-4763",
+        "rrf_score": 0.05,
+    })
+    assert source["source_type"] == "boe"
+    assert source["law_name"] == "CC"
+    assert source["article_number"] == "Artículo 1"
+    assert source["boe_id"] == "BOE-A-1889-4763"
+    assert source["source"] == "boe"
+
+
+# ── 4. RRF fusion with BOE results ──
+
+
+def test_rrf_fusion_boe_and_private():
+    private_vector = [
+        {"chunk_id": "private-1", "content": "contract clause", "document_id": "doc1",
+         "score": 0.9, "title": "Contract", "source": "upload", "source_url": None, "retrieval": "vector"},
+    ]
+    boe_vector = [
+        {"chunk_id": "boe:boe-1", "content": "artículo 1", "document_id": "boe:BOE-A-1889-4763",
+         "score": 0.85, "title": "CC — Artículo 1", "source": "boe", "source_url": "https://boe.es",
+         "source_type": "boe", "law_name": "CC", "article_number": "Artículo 1", "retrieval": "vector"},
+    ]
+    private_bm25 = [
+        {"chunk_id": "private-1", "content": "contract clause", "document_id": "doc1",
+         "score": 2.5, "title": "Contract", "source": "upload", "source_url": None, "retrieval": "bm25"},
+    ]
+    boe_bm25 = [
+        {"chunk_id": "boe:boe-1", "content": "artículo 1", "document_id": "boe:BOE-A-1889-4763",
+         "score": 1.8, "title": "CC — Artículo 1", "source": "boe", "source_url": "https://boe.es",
+         "source_type": "boe", "retrieval": "bm25"},
+    ]
+
+    all_vector = private_vector + boe_vector
+    all_bm25 = private_bm25 + boe_bm25
+    fused = RAGService._reciprocal_rank_fusion(all_vector, all_bm25)
+
+    assert len(fused) == 2
+    # Both chunks appear in both lists, so they should both have boosted scores
+    ids = [c["chunk_id"] for c in fused]
+    assert "private-1" in ids
+    assert "boe:boe-1" in ids
+
+    # Chunks appearing in both lists should have higher rrf_score than those in one
+    for chunk in fused:
+        assert chunk["rrf_score"] > 0
+
+
+def test_rrf_fusion_boe_in_both_lists_gets_boosted():
+    vector = [
+        {"chunk_id": "boe:boe-1", "content": "art 1", "document_id": "boe:BOE",
+         "score": 0.8, "title": "CC", "source": "boe", "source_url": None, "retrieval": "vector"},
+        {"chunk_id": "private-1", "content": "contract", "document_id": "doc1",
+         "score": 0.7, "title": "Doc", "source": "upload", "source_url": None, "retrieval": "vector"},
+    ]
+    bm25 = [
+        {"chunk_id": "boe:boe-1", "content": "art 1", "document_id": "boe:BOE",
+         "score": 3.0, "title": "CC", "source": "boe", "source_url": None, "retrieval": "bm25"},
+    ]
+    fused = RAGService._reciprocal_rank_fusion(vector, bm25)
+    # boe:boe-1 appears in both lists → higher RRF score than private-1
+    assert fused[0]["chunk_id"] == "boe:boe-1"
+    assert fused[0]["rrf_score"] > fused[1]["rrf_score"]
+
+
+# ── 5. Knowledge registry tests ──
+
+
+def test_plugin_auto_registration():
+    """Importing boe_plugin should auto-register the BOE plugin."""
+    import app.services.boe_plugin  # noqa: F401
+    plugins = get_plugins()
+    names = [p.name for p in plugins]
+    assert "boe" in names
+
+
+def test_register_plugin_idempotent():
+    """Registering the same plugin twice should not duplicate it."""
+    initial_count = len(get_plugins())
+    import app.services.boe_plugin  # noqa: F401
+    # Try registering again
+    from app.services.boe_plugin import _boe_plugin
+    register_plugin(_boe_plugin)
+    assert len(get_plugins()) == initial_count
+
+
+# ── 6. System prompt tests ──
+
+
+def test_system_prompt_without_boe():
+    prompt = _make_system_prompt("es", has_boe_results=False)
+    assert "BOE" not in prompt
+    assert "español" in prompt.lower()
+
+
+def test_system_prompt_with_boe():
+    prompt = _make_system_prompt("es", has_boe_results=True)
+    assert "BOE" in prompt
+    assert "Boletín Oficial del Estado" in prompt
+    assert "español" in prompt.lower()
+
+
+def test_system_prompt_english_with_boe():
+    prompt = _make_system_prompt("en", has_boe_results=True)
+    assert "BOE" in prompt
+    assert "English" in prompt
+
+
+# ── 7. Build context tests ──
+
+
+def test_build_context_private_chunks():
+    chunks = [
+        {"content": "clause 1", "source": "upload"},
+        {"content": "clause 2", "source": "drive"},
+    ]
+    ctx = RAGService._build_context(chunks)
+    assert "[Source 1]" in ctx
+    assert "[Source 2]" in ctx
+    assert "clause 1" in ctx
+
+
+def test_build_context_boe_chunks_include_law_info():
+    chunks = [
+        {"content": "private content", "source": "upload"},
+        {
+            "content": "art 1544 content",
+            "source": "boe",
+            "source_type": "boe",
+            "law_name": "CC",
+            "article_number": "Artículo 1544",
+        },
+    ]
+    ctx = RAGService._build_context(chunks)
+    assert "[Source 1]" in ctx
+    assert "[Source 2] (CC, Artículo 1544)" in ctx
+    assert "art 1544 content" in ctx
+
+
+def test_build_context_boe_chunk_without_article():
+    chunks = [
+        {
+            "content": "general provision",
+            "source": "boe",
+            "source_type": "boe",
+            "law_name": "ET",
+            "article_number": None,
+        },
+    ]
+    ctx = RAGService._build_context(chunks)
+    assert "[Source 1] (ET)" in ctx

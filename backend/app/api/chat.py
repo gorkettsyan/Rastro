@@ -24,6 +24,7 @@ from app.schemas.chat import (
 )
 from app.services.memory_extractor import memory_extractor_service
 from app.services.rag import rag_service
+from app.services.knowledge_registry import get_plugins
 from app.worker.queue import queue_service
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -46,7 +47,13 @@ _CHAT_SYSTEM_PROMPT_BASE = (
     "NEVER say 'I don't have memory of past interactions' if the memory section contains relevant information. "
     "Answer based on the provided document fragments, conversation history, and your memories. "
     "When citing a fragment, use the format [Source N]. "
-    "If you cannot find relevant information in any of these sources, say so clearly. "
+    "CRITICAL GROUNDING RULE: You may ONLY reference, quote, or paraphrase document content that appears VERBATIM in the provided [Source N] fragments. "
+    "NEVER generate, recall, or reconstruct document content from your own knowledge or training data. "
+    "When you cite [Source N], the information MUST actually appear in that source's text. "
+    "If the relevant clause, article, or section is NOT in the provided sources, you MUST explicitly state: "
+    "'The relevant section was not retrieved in the search results' and suggest the user search with more specific terms. "
+    "Do NOT fabricate or guess what a document might contain. "
+    "Synthesize information from all provided fragments, but ONLY from those fragments. "
     "Never invent data. "
     "Treat each memory item as an independent fact — "
     "do NOT infer connections or relationships between separate memory items. "
@@ -57,10 +64,24 @@ _CHAT_LANG_INSTRUCTIONS = {
     "es": "IMPORTANTE: Responde siempre en español, independientemente del idioma de los documentos.",
 }
 
+_CHAT_BOE_INSTRUCTION = (
+    "\n\nSome fragments come from the user's private documents and some from Spanish legislation (BOE). "
+    "When BOTH are present, structure your answer as follows:\n"
+    "1. First, analyze what the user's contract/document specifically says — cite the clause number and quote the key language.\n"
+    "2. Then, explain how the legislation applies to that specific clause — cite the law name and article number.\n"
+    "3. Identify any legal risks, compliance issues, or weak points in the contract clause under the applicable law.\n"
+    "Be specific: cite clause numbers from the contract AND article numbers from the law. "
+    "Do NOT write generic legal summaries — always tie the law back to the user's specific document. "
+    "Add a brief disclaimer that legislation may have been updated."
+)
 
-def _make_chat_system_prompt(language: str) -> str:
+
+def _make_chat_system_prompt(language: str, has_boe_results: bool = False) -> str:
     instruction = _CHAT_LANG_INSTRUCTIONS.get(language, _CHAT_LANG_INSTRUCTIONS["en"])
-    return _CHAT_SYSTEM_PROMPT_BASE + instruction
+    prompt = _CHAT_SYSTEM_PROMPT_BASE + instruction
+    if has_boe_results:
+        prompt += _CHAT_BOE_INSTRUCTION
+    return prompt
 
 
 @router.get("", response_model=ConversationList)
@@ -196,17 +217,52 @@ async def send_message(
                     retrieval_query = f"{last_assistant.content[:200]} {body.message}"
 
             query_vector = await rag_service._embed_query(retrieval_query)
-            chunks = await rag_service._vector_search(
-                db, current_user.org_id, query_vector, conv.project_id,
-                user_id=current_user.id,
-            )
+
+            # Private vector + BM25 + plugin searches in parallel
+            import asyncio
+            search_tasks = [
+                rag_service._vector_search(
+                    db, current_user.org_id, query_vector, conv.project_id,
+                    user_id=current_user.id,
+                ),
+                rag_service._bm25_search(
+                    db, current_user.org_id, retrieval_query, conv.project_id,
+                    user_id=current_user.id,
+                ),
+            ]
+            plugins = get_plugins()
+            for plugin in plugins:
+                search_tasks.append(plugin.vector_search(db, query_vector, limit=10))
+                search_tasks.append(plugin.bm25_search(db, retrieval_query, limit=10))
+
+            search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+
+            private_vector = search_results[0] if not isinstance(search_results[0], Exception) else []
+            private_bm25 = search_results[1] if not isinstance(search_results[1], Exception) else []
+
+            plugin_vector = []
+            plugin_bm25 = []
+            for i, plugin in enumerate(plugins):
+                pv = search_results[2 + i * 2]
+                pb = search_results[3 + i * 2]
+                if not isinstance(pv, Exception):
+                    plugin_vector.extend(pv)
+                if not isinstance(pb, Exception):
+                    plugin_bm25.extend(pb)
+
+            # RRF fusion across all sources
+            all_vector = private_vector + plugin_vector
+            all_bm25 = private_bm25 + plugin_bm25
+            fused = rag_service._reciprocal_rank_fusion(all_vector, all_bm25)
+            chunks = fused[:10]
             context = rag_service._build_context(chunks)
 
         # 5. Fetch memories
         memory_block = await memory_extractor_service.get_memories_for_prompt(db, current_user.id, current_query=body.message)
 
         # 6. Build messages array for GPT-4o
-        system_content = _make_chat_system_prompt(body.language) + memory_block
+        has_boe = any(c.get("source_type") == "boe" or c.get("source") == "boe" for c in chunks)
+        system_content = _make_chat_system_prompt(body.language, has_boe_results=has_boe) + memory_block
         gpt_messages = [{"role": "system", "content": system_content}]
 
         for msg in history:
@@ -232,17 +288,22 @@ async def send_message(
                 yield f"data: {json.dumps({'type': 'token', 'content': delta})}\n\n"
 
         # 8. Emit sources
-        sources = [
-            {
+        sources = []
+        for c in chunks[:5]:
+            src = {
                 "document_id": str(c["document_id"]),
                 "title": c["title"],
                 "source": c["source"],
                 "source_url": c["source_url"],
-                "score": round(c["score"], 3),
+                "score": round(c.get("rrf_score", c.get("score", 0)), 3),
                 "excerpt": c["content"][:200],
             }
-            for c in chunks[:5]
-        ]
+            if c.get("source_type") == "boe":
+                src["source_type"] = "boe"
+                src["law_name"] = c.get("law_name")
+                src["article_number"] = c.get("article_number")
+                src["boe_id"] = c.get("boe_id")
+            sources.append(src)
         yield f"data: {json.dumps({'type': 'sources', 'sources': sources})}\n\n"
         yield f"data: {json.dumps({'type': 'done'})}\n\n"
 

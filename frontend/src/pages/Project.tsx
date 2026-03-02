@@ -168,6 +168,20 @@ export default function Project() {
                     : doc.indexing_status === "error" ? "error"
                     : "indexing")}
                 </span>
+                <button
+                  className="r-btn-ghost"
+                  style={{ padding: "2px 8px", fontSize: "12px", color: "var(--color-error)" }}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!confirm(t("delete") + " " + doc.title + "?")) return;
+                    try {
+                      await api.delete(`/documents/${doc.id}`);
+                      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
+                    } catch { toast.error(t("error")); }
+                  }}
+                >
+                  {t("delete")}
+                </button>
               </div>
             ))}
           </div>

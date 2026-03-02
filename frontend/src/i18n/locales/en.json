@@ -217,5 +217,11 @@
   "landing_final_headline": "Start searching your documents today",
   "landing_final_sub": "Set up your account in under 2 minutes. No credit card required.",
   "landing_privacy": "Privacy",
-  "landing_terms": "Terms"
+  "landing_terms": "Terms",
+
+  "source_boe": "BOE",
+  "boe_disclaimer": "Consolidated legislation — may have been updated",
+  "boe_disclaimer_full": "BOE sources correspond to consolidated legislation from the Boletín Oficial del Estado. Always verify the current version at boe.es before making legal decisions.",
+  "boe_law": "Law",
+  "boe_article": "Article"
 }

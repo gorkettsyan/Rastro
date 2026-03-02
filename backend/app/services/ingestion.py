@@ -1,4 +1,5 @@
 import hashlib
+import re
 import uuid
 from datetime import datetime, timezone
 
@@ -17,12 +18,80 @@ _enc = tiktoken.get_encoding("cl100k_base")
 CHUNK_SIZE = 512
 CHUNK_OVERLAP = 50
 
+# Patterns that mark clause boundaries in Spanish contracts
+_CLAUSE_PATTERN = re.compile(
+    r"^("
+    r"\d+\.\d+\.\d+\.?\s+"       # 1.2.3 or 1.2.3.
+    r"|\d+\.\d+\.?\s+"           # 1.2 or 1.2.
+    r"|\d+\.\s+"                 # 1.
+    r"|CG[-‑]?\d+"              # CG-1, CG1
+    r"|[Cc]l[áa]usula\s+"       # Cláusula primera
+    r"|Art[íi]culo\s+\d+"       # Artículo 1
+    r"|PRIMERA\b|SEGUNDA\b|TERCERA\b|CUARTA\b|QUINTA\b"
+    r"|SEXTA\b|SÉPTIMA\b|OCTAVA\b|NOVENA\b|DÉCIMA\b"
+    r")",
+    re.MULTILINE,
+)
+
 
 class IngestionService:
     def __init__(self, embedding_svc: BaseEmbeddingService):
         self._embedding_svc = embedding_svc
 
+    @staticmethod
+    def _split_by_clauses(text: str) -> list[str] | None:
+        """Try to split text by clause boundaries. Returns None if not clause-structured."""
+        matches = list(_CLAUSE_PATTERN.finditer(text))
+        if len(matches) < 4:
+            return None
+
+        clauses = []
+        for i, match in enumerate(matches):
+            start = match.start()
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+            clause_text = text[start:end].strip()
+            if not clause_text:
+                continue
+
+            tokens = _enc.encode(clause_text)
+            if len(tokens) <= CHUNK_SIZE:
+                clauses.append(clause_text)
+            else:
+                # Sub-split long clauses, preserving header
+                first_line = clause_text.split("\n")[0]
+                header = first_line[:120]
+                header_tokens = _enc.encode(header + "\n\n")
+                available = CHUNK_SIZE - len(header_tokens)
+                if available < 100:
+                    available = CHUNK_SIZE
+                content_tokens = _enc.encode(clause_text)
+                pos = 0
+                overlap = 50
+                while pos < len(content_tokens):
+                    chunk_end = min(pos + available, len(content_tokens))
+                    chunk_text = _enc.decode(content_tokens[pos:chunk_end])
+                    if pos > 0:
+                        chunk_text = f"{header}\n\n{chunk_text}"
+                    clauses.append(chunk_text)
+                    if chunk_end >= len(content_tokens):
+                        break
+                    pos += available - overlap
+
+        # Capture any preamble before the first clause
+        if matches and matches[0].start() > 100:
+            preamble = text[:matches[0].start()].strip()
+            if preamble:
+                clauses.insert(0, preamble)
+
+        return [c for c in clauses if c.strip()] if clauses else None
+
     def _split_into_chunks(self, text: str) -> list[str]:
+        # Try clause-aware splitting first
+        clause_chunks = self._split_by_clauses(text)
+        if clause_chunks:
+            return clause_chunks
+
+        # Fallback: fixed-size token splitting
         tokens = _enc.encode(text)
         chunks = []
         start = 0

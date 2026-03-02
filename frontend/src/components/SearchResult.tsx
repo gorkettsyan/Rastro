@@ -13,6 +13,7 @@ interface Props {
 export default function SearchResult({ query, answer, chunks, streaming }: Props) {
   const { t } = useTranslation();
   const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
+  const hasBoe = chunks.some((c) => c.source_type === "boe");
 
   if (!query) return null;
 
@@ -48,6 +49,11 @@ export default function SearchResult({ query, answer, chunks, streaming }: Props
                 />
               ))}
             </div>
+            {hasBoe && (
+              <div className="r-citation-boe-disclaimer">
+                {t("boe_disclaimer_full")}
+              </div>
+            )}
           </div>
         )}
       </div>

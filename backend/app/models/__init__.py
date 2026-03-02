@@ -11,9 +11,10 @@ from app.models.memory import Memory
 from app.models.invite import Invite
 from app.models.project_member import ProjectMember
 from app.models.obligation import Obligation
+from app.models.boe import BoeLaw, BoeChunk
 
 __all__ = [
     "Organization", "User", "IntegrationToken", "Project", "Document",
     "Chunk", "SearchLog", "Conversation", "Message", "Memory",
-    "Invite", "ProjectMember", "Obligation",
+    "Invite", "ProjectMember", "Obligation", "BoeLaw", "BoeChunk",
 ]

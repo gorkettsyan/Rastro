@@ -39,7 +39,6 @@ export default function CitationCard({ index, source, onExpand, showAddToProject
         <span className="r-citation-index">[{index}]</span>
         {source.title}
         {isBoe && <span className="r-citation-boe-badge">BOE</span>}
-        <span className="r-citation-score">{(source.score * 100).toFixed(0)}%</span>
       </p>
       <p className="r-citation-excerpt">{source.excerpt}</p>
       {isBoe && (

@@ -195,31 +195,40 @@ def test_rrf_fusion_boe_and_private():
     fused = RAGService._reciprocal_rank_fusion(all_vector, all_bm25)
 
     assert len(fused) == 2
-    # Both chunks appear in both lists, so they should both have boosted scores
     ids = [c["chunk_id"] for c in fused]
     assert "private-1" in ids
     assert "boe:boe-1" in ids
 
-    # Chunks appearing in both lists should have higher rrf_score than those in one
     for chunk in fused:
         assert chunk["rrf_score"] > 0
 
 
-def test_rrf_fusion_boe_in_both_lists_gets_boosted():
-    vector = [
-        {"chunk_id": "boe:boe-1", "content": "art 1", "document_id": "boe:BOE",
-         "score": 0.8, "title": "CC", "source": "boe", "source_url": None, "retrieval": "vector"},
-        {"chunk_id": "private-1", "content": "contract", "document_id": "doc1",
-         "score": 0.7, "title": "Doc", "source": "upload", "source_url": None, "retrieval": "vector"},
+def test_diversify_sources_interleaves():
+    """_diversify_sources ensures private chunks aren't buried by BOE."""
+    chunks = [
+        {"chunk_id": "boe:1", "source": "boe", "source_type": "boe"},
+        {"chunk_id": "boe:2", "source": "boe", "source_type": "boe"},
+        {"chunk_id": "boe:3", "source": "boe", "source_type": "boe"},
+        {"chunk_id": "priv-1", "source": "upload"},
+        {"chunk_id": "priv-2", "source": "upload"},
     ]
-    bm25 = [
-        {"chunk_id": "boe:boe-1", "content": "art 1", "document_id": "boe:BOE",
-         "score": 3.0, "title": "CC", "source": "boe", "source_url": None, "retrieval": "bm25"},
+    result = RAGService._diversify_sources(chunks, 4)
+    # Private chunks pulled up to alternate with BOE
+    assert result[0]["chunk_id"] == "priv-1"
+    assert result[1]["chunk_id"] == "boe:1"
+    assert result[2]["chunk_id"] == "priv-2"
+    assert result[3]["chunk_id"] == "boe:2"
+
+
+def test_diversify_sources_single_type_passthrough():
+    """When only one source type exists, top_n are returned in order."""
+    chunks = [
+        {"chunk_id": "boe:1", "source": "boe", "source_type": "boe"},
+        {"chunk_id": "boe:2", "source": "boe", "source_type": "boe"},
     ]
-    fused = RAGService._reciprocal_rank_fusion(vector, bm25)
-    # boe:boe-1 appears in both lists → higher RRF score than private-1
-    assert fused[0]["chunk_id"] == "boe:boe-1"
-    assert fused[0]["rrf_score"] > fused[1]["rrf_score"]
+    result = RAGService._diversify_sources(chunks, 5)
+    assert len(result) == 2
+    assert result[0]["chunk_id"] == "boe:1"
 
 
 # ── 5. Knowledge registry tests ──

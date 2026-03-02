@@ -208,6 +208,8 @@ async def send_message(
         chunks = []
         context = ""
         if needs_search:
+            import asyncio
+
             retrieval_query = body.message
             if history and len(body.message.split()) < 5:
                 last_assistant = next(
@@ -216,10 +218,17 @@ async def send_message(
                 if last_assistant:
                     retrieval_query = f"{last_assistant.content[:200]} {body.message}"
 
-            query_vector = await rag_service._embed_query(retrieval_query)
+            # Generate document-vocabulary expansion in parallel with embedding
+            doc_query_task = rag_service._expand_query_for_documents(retrieval_query)
+            embed_task = rag_service._embed_query(retrieval_query)
+            query_vector, doc_query = await asyncio.gather(embed_task, doc_query_task)
 
-            # Private vector + BM25 + plugin searches in parallel
-            import asyncio
+            # Embed expanded query if available
+            doc_vector = None
+            if doc_query:
+                doc_vector = await rag_service._embed_query(doc_query)
+
+            # Private vector + BM25 + expanded query + plugin searches in parallel
             search_tasks = [
                 rag_service._vector_search(
                     db, current_user.org_id, query_vector, conv.project_id,
@@ -230,7 +239,19 @@ async def send_message(
                     user_id=current_user.id,
                 ),
             ]
+            # Expanded document query — private docs only
+            if doc_vector and doc_query:
+                search_tasks.append(rag_service._vector_search(
+                    db, current_user.org_id, doc_vector, conv.project_id,
+                    user_id=current_user.id,
+                ))
+                search_tasks.append(rag_service._bm25_search(
+                    db, current_user.org_id, doc_query, conv.project_id,
+                    user_id=current_user.id,
+                ))
+
             plugins = get_plugins()
+            plugin_start_idx = len(search_tasks)
             for plugin in plugins:
                 search_tasks.append(plugin.vector_search(db, query_vector, limit=10))
                 search_tasks.append(plugin.bm25_search(db, retrieval_query, limit=10))
@@ -240,21 +261,28 @@ async def send_message(
             private_vector = search_results[0] if not isinstance(search_results[0], Exception) else []
             private_bm25 = search_results[1] if not isinstance(search_results[1], Exception) else []
 
+            # Merge expanded query results
+            if doc_vector and doc_query:
+                exp_vector = search_results[2] if not isinstance(search_results[2], Exception) else []
+                exp_bm25 = search_results[3] if not isinstance(search_results[3], Exception) else []
+                private_vector = private_vector + exp_vector
+                private_bm25 = private_bm25 + exp_bm25
+
             plugin_vector = []
             plugin_bm25 = []
             for i, plugin in enumerate(plugins):
-                pv = search_results[2 + i * 2]
-                pb = search_results[3 + i * 2]
+                pv = search_results[plugin_start_idx + i * 2]
+                pb = search_results[plugin_start_idx + i * 2 + 1]
                 if not isinstance(pv, Exception):
                     plugin_vector.extend(pv)
                 if not isinstance(pb, Exception):
                     plugin_bm25.extend(pb)
 
-            # RRF fusion across all sources
+            # RRF fusion across all sources, then diversify
             all_vector = private_vector + plugin_vector
             all_bm25 = private_bm25 + plugin_bm25
             fused = rag_service._reciprocal_rank_fusion(all_vector, all_bm25)
-            chunks = fused[:10]
+            chunks = rag_service._diversify_sources(fused, 10)
             context = rag_service._build_context(chunks)
 
         # 5. Fetch memories

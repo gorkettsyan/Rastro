@@ -74,6 +74,22 @@ _QUERY_REWRITE_PROMPT = (
     "Original query: {query}"
 )
 
+_DOCUMENT_QUERY_PROMPT = (
+    "You are a search query expander for a document retrieval system. "
+    "The user asked a conceptual legal question. Your job is to generate a COMPLEMENTARY search query "
+    "that uses concrete contract/document vocabulary to find the relevant clauses.\n\n"
+    "Rules:\n"
+    "- Keep the same language as the original query\n"
+    "- Use specific terms that would appear IN a contract: party roles (prestador, cliente, arrendador, "
+    "arrendatario), clause markers (CG, cláusula, artículo), actions (modificar, resolver, rescindir, "
+    "notificar, indemnizar), timeframes (plazo, preaviso, vigencia)\n"
+    "- Do NOT repeat the original query — generate DIFFERENT keywords that would match the actual "
+    "contract language for the same concept\n"
+    "- Output a single line of 5-10 search keywords, no explanation\n\n"
+    "Original query: {query}\n"
+    "Document-vocabulary query:"
+)
+
 
 class RAGService:
     def __init__(self, embedding_svc: BaseEmbeddingService, reranker_svc: BaseRerankerService):
@@ -99,6 +115,24 @@ class RAGService:
         except Exception as e:
             log.warning("Query rewrite failed: %s", e)
             return query
+
+    async def _expand_query_for_documents(self, query: str) -> str | None:
+        """Generate a complementary query using document/contract vocabulary."""
+        try:
+            response = await self._openai.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": _DOCUMENT_QUERY_PROMPT.format(query=query)}],
+                temperature=0.3,
+                max_tokens=80,
+            )
+            expanded = response.choices[0].message.content.strip()
+            if expanded and expanded != query:
+                log.debug("Document query expansion: '%s' → '%s'", query, expanded)
+                return expanded
+            return None
+        except Exception as e:
+            log.warning("Document query expansion failed: %s", e)
+            return None
 
     async def _embed_query(self, query: str) -> list[float]:
         vectors = await self._embedding_svc.embed_texts([query])
@@ -260,6 +294,38 @@ class RAGService:
         return result
 
     @staticmethod
+    def _diversify_sources(chunks: list[dict], top_n: int) -> list[dict]:
+        """Interleave private and plugin chunks so neither source type dominates the final output."""
+        def _is_plugin(c: dict) -> bool:
+            return c.get("source_type") == "boe" or c.get("source") == "boe"
+
+        private = [c for c in chunks if not _is_plugin(c)]
+        plugin = [c for c in chunks if _is_plugin(c)]
+
+        if not private or not plugin:
+            return chunks[:top_n]
+
+        result: list[dict] = []
+        seen: set[str] = set()
+        pi, qi = 0, 0
+        while len(result) < top_n and (pi < len(private) or qi < len(plugin)):
+            if pi < len(private):
+                cid = private[pi]["chunk_id"]
+                if cid not in seen:
+                    result.append(private[pi])
+                    seen.add(cid)
+                pi += 1
+            if len(result) >= top_n:
+                break
+            if qi < len(plugin):
+                cid = plugin[qi]["chunk_id"]
+                if cid not in seen:
+                    result.append(plugin[qi])
+                    seen.add(cid)
+                qi += 1
+        return result
+
+    @staticmethod
     def _build_context(chunks: list[dict]) -> str:
         parts = []
         for i, c in enumerate(chunks, 1):
@@ -306,18 +372,32 @@ class RAGService:
         await db.flush()
 
         try:
-            # 1. Query rewriting
-            rewritten = await self._rewrite_query(query)
+            # 1. Query rewriting + document-vocabulary expansion (parallel)
+            rewritten, doc_query = await asyncio.gather(
+                self._rewrite_query(query),
+                self._expand_query_for_documents(query),
+            )
 
-            # 2. Embed
-            query_vector = await self._embed_query(rewritten)
+            # 2. Embed primary query (+ expanded query if available)
+            embed_tasks = [self._embed_query(rewritten)]
+            if doc_query:
+                embed_tasks.append(self._embed_query(doc_query))
+            embed_results = await asyncio.gather(*embed_tasks)
+            query_vector = embed_results[0]
+            doc_vector = embed_results[1] if doc_query else None
 
-            # 3. Parallel retrieval (private + plugins)
+            # 3. Parallel retrieval (primary + expanded + plugins)
             tasks = [
                 self._vector_search(db, org_id, query_vector, project_id, user_id=user_id),
                 self._bm25_search(db, org_id, rewritten, project_id, user_id=user_id),
             ]
+            # Expanded document query — private docs only (no plugins)
+            if doc_vector and doc_query:
+                tasks.append(self._vector_search(db, org_id, doc_vector, project_id, user_id=user_id))
+                tasks.append(self._bm25_search(db, org_id, doc_query, project_id, user_id=user_id))
+
             plugins = get_plugins()
+            plugin_start_idx = len(tasks)
             for plugin in plugins:
                 tasks.append(plugin.vector_search(db, query_vector))
                 tasks.append(plugin.bm25_search(db, rewritten))
@@ -327,12 +407,19 @@ class RAGService:
             vector_results = results[0] if not isinstance(results[0], Exception) else []
             bm25_results = results[1] if not isinstance(results[1], Exception) else []
 
+            # Merge expanded query results into primary results
+            if doc_vector and doc_query:
+                exp_vector = results[2] if not isinstance(results[2], Exception) else []
+                exp_bm25 = results[3] if not isinstance(results[3], Exception) else []
+                vector_results = vector_results + exp_vector
+                bm25_results = bm25_results + exp_bm25
+
             # Collect plugin results
             plugin_vector_all: list[dict] = []
             plugin_bm25_all: list[dict] = []
             for i, plugin in enumerate(plugins):
-                pv_idx = 2 + i * 2
-                pb_idx = 3 + i * 2
+                pv_idx = plugin_start_idx + i * 2
+                pb_idx = plugin_start_idx + i * 2 + 1
                 pv = results[pv_idx] if not isinstance(results[pv_idx], Exception) else []
                 pb = results[pb_idx] if not isinstance(results[pb_idx], Exception) else []
                 if isinstance(pv, Exception):
@@ -344,7 +431,7 @@ class RAGService:
                 plugin_vector_all.extend(pv)
                 plugin_bm25_all.extend(pb)
 
-            # 4. RRF fusion (private + plugin results merged)
+            # 4. RRF fusion (primary + expanded + plugin results merged)
             all_vector = vector_results + plugin_vector_all
             all_bm25 = bm25_results + plugin_bm25_all
             fused = self._reciprocal_rank_fusion(all_vector, all_bm25)
@@ -363,8 +450,9 @@ class RAGService:
                 await db.flush()
                 return
 
-            # 5. Rerank
-            top_chunks = await self._reranker_svc.rerank(query, fused[:50], top_n=TOP_K_RERANK)
+            # 5. Rerank (get extra candidates, then diversify sources)
+            reranked = await self._reranker_svc.rerank(query, fused[:50], top_n=TOP_K_RERANK * 3)
+            top_chunks = self._diversify_sources(reranked, TOP_K_RERANK)
 
             # 6. Stream GPT-4o
             has_boe = any(c.get("source_type") == "boe" or c.get("source") == "boe" for c in top_chunks)

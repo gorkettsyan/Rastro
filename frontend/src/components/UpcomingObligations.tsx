@@ -39,7 +39,7 @@ export default function UpcomingObligations() {
     <div className="r-upcoming-card">
       <div className="r-section-header">
         <p className="r-section-label">{t("upcoming_deadlines")}</p>
-        <Link to="/obligations" className="r-link-muted" style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+        <Link to="/obligations" className="r-link-muted" style={{ fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.1em" }}>
           {t("view_all")} →
         </Link>
       </div>

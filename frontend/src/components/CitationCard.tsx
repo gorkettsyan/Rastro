@@ -41,11 +41,6 @@ export default function CitationCard({ index, source, onExpand, showAddToProject
         {isBoe && <span className="r-citation-boe-badge">BOE</span>}
       </p>
       <p className="r-citation-excerpt">{source.excerpt}</p>
-      {isBoe && (
-        <p style={{ fontSize: "11px", color: "var(--ink-muted)", marginTop: "4px" }}>
-          {t("boe_disclaimer")}
-        </p>
-      )}
       {!isBoe && showAddToProject && (
         <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid var(--border-subtle)" }}>
           <AddToProjectButton documentId={source.document_id} />

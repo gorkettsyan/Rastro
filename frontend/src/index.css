@@ -66,11 +66,12 @@
 
 body {
   font-family: var(--font-body);
+  font-size: 15px;
   background-color: var(--bg-page);
   color: var(--ink-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 /* ── App layout (sidebar + content) ── */
@@ -131,7 +132,7 @@ body {
   padding: 8px var(--space-md);
   border-radius: var(--radius-md);
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 400;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -182,13 +183,13 @@ body {
 }
 
 .r-header-email {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-muted);
 }
 
 .r-header-signout {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -236,9 +237,9 @@ body {
   border: none;
   outline: none;
   background: transparent;
-  padding: 13px 0;
+  padding: 14px 0;
   font-family: var(--font-body);
-  font-size: 14px;
+  font-size: 16px;
   color: var(--ink-primary);
 }
 .r-search-input::placeholder { color: var(--ink-muted); }
@@ -277,7 +278,7 @@ body {
 
 .r-section-label {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -329,7 +330,7 @@ body {
 }
 
 .r-project-client {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-secondary);
   margin: 0;
 }
@@ -405,7 +406,7 @@ body {
 
 .r-doc-source {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 400;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -415,7 +416,7 @@ body {
 /* ── Buttons ── */
 .r-btn-primary {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -436,7 +437,7 @@ body {
 
 .r-btn-ghost {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -459,7 +460,7 @@ body {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-muted);
   cursor: pointer;
   text-decoration: none;
@@ -470,7 +471,7 @@ body {
 /* ── Language switcher ── */
 .r-lang-btn {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -499,7 +500,7 @@ body {
 
 .r-empty-icon  { font-size: 28px; opacity: 0.5; }
 .r-empty-title { font-size: 14px; font-weight: 500; color: var(--ink-secondary); margin: 0; }
-.r-empty-desc  { font-size: 13px; color: var(--ink-muted); margin: 0; }
+.r-empty-desc  { font-size: 15px; color: var(--ink-muted); margin: 0; }
 
 /* ── Login ── */
 .r-login-page {
@@ -585,7 +586,7 @@ body {
 
 .r-chat-sidebar-label {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -596,7 +597,7 @@ body {
 .r-conv-item {
   padding: 8px 10px;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-secondary);
   cursor: pointer;
   transition: background 0.12s;
@@ -727,14 +728,14 @@ body {
 }
 
 .r-result-query {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-muted);
   font-style: italic;
   margin: 0 0 var(--space-md) 0;
 }
 
 .r-result-answer {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink-primary);
   line-height: 1.7;
   white-space: pre-wrap;
@@ -756,7 +757,7 @@ body {
 }
 
 .r-citation-title {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--ink-primary);
   margin: 0 0 4px 0;
@@ -770,14 +771,8 @@ body {
   margin-right: 4px;
 }
 
-.r-citation-score {
-  color: var(--ink-muted);
-  font-weight: 400;
-  margin-left: 6px;
-}
-
 .r-citation-excerpt {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-secondary);
   margin: 0;
   display: -webkit-box;
@@ -794,7 +789,7 @@ body {
   display: inline-block;
   background: #fef5e7;
   color: #b97316;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   padding: 1px 6px;
   border-radius: var(--radius-full);
@@ -802,7 +797,7 @@ body {
   vertical-align: middle;
 }
 .r-citation-boe-disclaimer {
-  font-size: 11px;
+  font-size: 15px;
   color: var(--ink-muted);
   margin-top: 8px;
   padding: 8px 12px;
@@ -859,7 +854,7 @@ body {
 }
 
 .r-memory-source {
-  font-size: 13px;
+  font-size: 15px;
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -871,7 +866,7 @@ body {
 }
 
 .r-link-danger {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--color-error);
   background: none;
   border: none;
@@ -883,7 +878,7 @@ body {
 .r-link-danger:hover { opacity: 1; }
 
 .r-link-muted {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-muted);
   background: none;
   border: none;
@@ -921,7 +916,7 @@ body {
 /* ── Filter button ── */
 .r-btn-filter {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -977,7 +972,7 @@ body {
   border-radius: var(--radius-md);
   padding: 10px var(--space-md);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-primary);
   outline: none;
   cursor: pointer;
@@ -986,12 +981,12 @@ body {
 .r-select:focus { border-color: var(--border-strong); }
 
 .r-invite-link-expires {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-muted);
 }
 
 .r-invite-error {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--color-error);
   margin: var(--space-xs) 0 0 0;
 }
@@ -1033,7 +1028,7 @@ body {
 }
 
 .r-member-email {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -1118,7 +1113,7 @@ body {
   gap: var(--space-sm);
   padding: 8px 0;
   border-bottom: 1px solid var(--border-subtle);
-  font-size: 13px;
+  font-size: 15px;
 }
 .r-upcoming-item:last-child { border-bottom: none; }
 
@@ -1131,7 +1126,7 @@ body {
 }
 
 .r-upcoming-doc {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -1152,7 +1147,7 @@ body {
   border-radius: var(--radius-md);
   padding: 8px var(--space-md);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-primary);
   outline: none;
   cursor: pointer;
@@ -1167,7 +1162,7 @@ body {
 }
 
 .r-obligation-meta {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-muted);
   white-space: nowrap;
 }
@@ -1234,7 +1229,7 @@ body {
   padding: 12px var(--space-lg);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-md);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--ink-primary);
   background: var(--bg-card);
@@ -1255,7 +1250,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 700;
   flex-shrink: 0;
 }
@@ -1299,7 +1294,7 @@ body {
 }
 
 .r-preference-desc {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-muted);
   line-height: 1.4;
 }
@@ -1376,7 +1371,7 @@ body {
 
 .r-stat-label {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1392,7 +1387,7 @@ body {
   background: var(--color-warning-bg);
   border: 1px solid #f0dfc0;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-secondary);
   line-height: 1.5;
 }
@@ -1406,7 +1401,7 @@ body {
   border-radius: 50%;
   background: var(--color-warning);
   color: white;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
   flex-shrink: 0;
   margin-top: 1px;
@@ -1464,14 +1459,14 @@ body {
 }
 
 .r-clause-summary {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-secondary);
   line-height: 1.6;
   margin: var(--space-sm) 0 0 0;
 }
 
 .r-clause-translated-note {
-  font-size: 11px;
+  font-size: 15px;
   color: var(--ink-muted);
   font-style: italic;
   margin: 2px 0 0 0;
@@ -1483,7 +1478,7 @@ body {
   background: var(--bg-page);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-secondary);
   line-height: 1.6;
   white-space: pre-wrap;
@@ -1505,7 +1500,7 @@ body {
 }
 
 .r-clause-missing-item {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-muted);
   padding: 6px 0;
   border-bottom: 1px solid var(--border-subtle);
@@ -1540,7 +1535,7 @@ body {
 }
 
 .r-compare-column-title {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--ink-primary);
   margin: 0 0 var(--space-sm) 0;
@@ -1550,7 +1545,7 @@ body {
 }
 
 .r-compare-column-text {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-secondary);
   line-height: 1.6;
   white-space: pre-wrap;
@@ -1581,7 +1576,7 @@ body {
   display: block;
   width: 100%;
   padding: 8px var(--space-md);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-primary);
   background: none;
   border: none;
@@ -1616,7 +1611,7 @@ body {
 .r-clause-stats {
   display: flex;
   gap: var(--space-md);
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-muted);
 }
 
@@ -1667,7 +1662,7 @@ body {
 
 .r-landing-nav-link {
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -1688,7 +1683,7 @@ body {
 /* ── Buttons ── */
 .r-landing-btn-primary {
   font-family: var(--font-display);
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.10em;
   text-transform: uppercase;
@@ -1705,7 +1700,7 @@ body {
 .r-landing-btn-primary:hover { background: var(--landing-accent-hover); }
 
 .r-landing-btn-lg {
-  font-size: 13px;
+  font-size: 15px;
   padding: 14px 32px;
   border-radius: 10px;
 }
@@ -1741,7 +1736,7 @@ body {
 }
 
 .r-landing-cta-note {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--landing-ink-muted);
   margin: 0;
 }
@@ -1783,7 +1778,7 @@ body {
 
 .r-landing-section-label {
   font-family: var(--font-display);
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -1930,7 +1925,7 @@ body {
 }
 
 .r-landing-footer-link {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--landing-ink-muted);
   text-decoration: none;
   transition: color 0.15s;

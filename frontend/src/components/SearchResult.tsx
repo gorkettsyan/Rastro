@@ -13,7 +13,9 @@ interface Props {
 export default function SearchResult({ query, answer, chunks, streaming }: Props) {
   const { t } = useTranslation();
   const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
-  const hasBoe = chunks.some((c) => c.source_type === "boe");
+
+  const docChunks = chunks.filter((c) => c.source_type !== "boe");
+  const boeChunks = chunks.filter((c) => c.source_type === "boe");
 
   if (!query) return null;
 
@@ -31,29 +33,47 @@ export default function SearchResult({ query, answer, chunks, streaming }: Props
           <p className="r-result-answer" style={{ color: "var(--ink-muted)" }}>{t("searching")}</p>
         )}
 
-        {!streaming && answer && chunks.length === 0 && (
-          <p style={{ fontSize: "12px", color: "var(--ink-muted)", marginTop: "12px" }}>{t("no_results")}</p>
+        {!streaming && !answer && chunks.length === 0 && (
+          <p style={{ fontSize: "14px", color: "var(--ink-muted)", marginTop: "12px" }}>{t("no_results")}</p>
         )}
 
-        {chunks.length > 0 && (
+        {docChunks.length > 0 && (
           <div style={{ marginTop: "var(--space-md)" }}>
-            <p className="r-section-label" style={{ marginBottom: "var(--space-sm)" }}>{t("sources")}</p>
+            <p className="r-section-label" style={{ marginBottom: "var(--space-sm)" }}>
+              {t("your_documents")}
+            </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {chunks.map((chunk, i) => (
+              {docChunks.map((chunk, i) => (
                 <CitationCard
                   key={chunk.document_id + i}
-                  index={i + 1}
+                  index={chunks.indexOf(chunk) + 1}
                   source={chunk}
                   onExpand={setExpandedDocId}
                   showAddToProject
                 />
               ))}
             </div>
-            {hasBoe && (
-              <div className="r-citation-boe-disclaimer">
-                {t("boe_disclaimer_full")}
-              </div>
-            )}
+          </div>
+        )}
+
+        {boeChunks.length > 0 && (
+          <div style={{ marginTop: "var(--space-md)" }}>
+            <p className="r-section-label" style={{ marginBottom: "var(--space-sm)" }}>
+              {t("source_boe")}
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {boeChunks.map((chunk, i) => (
+                <CitationCard
+                  key={chunk.document_id + i}
+                  index={chunks.indexOf(chunk) + 1}
+                  source={chunk}
+                  onExpand={setExpandedDocId}
+                />
+              ))}
+            </div>
+            <div className="r-citation-boe-disclaimer">
+              {t("boe_disclaimer_full")}
+            </div>
           </div>
         )}
       </div>

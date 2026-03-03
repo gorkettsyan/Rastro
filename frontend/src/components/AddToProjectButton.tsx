@@ -46,7 +46,7 @@ export default function AddToProjectButton({ documentId }: Props) {
 
   if (assigned) {
     return (
-      <span style={{ fontSize: "11px", color: "var(--color-success)", fontWeight: 500 }}>✓ {assigned}</span>
+      <span style={{ fontSize: "13px", color: "var(--color-success)", fontWeight: 500 }}>✓ {assigned}</span>
     );
   }
 
@@ -56,7 +56,7 @@ export default function AddToProjectButton({ documentId }: Props) {
         onClick={() => setOpen((v) => !v)}
         disabled={saving || projects.length === 0}
         style={{
-          fontSize: "11px",
+          fontSize: "13px",
           color: "var(--ink-muted)",
           background: "none",
           border: "none",
@@ -92,7 +92,7 @@ export default function AddToProjectButton({ documentId }: Props) {
                 width: "100%",
                 textAlign: "left",
                 padding: "7px var(--space-md)",
-                fontSize: "12px",
+                fontSize: "14px",
                 color: "var(--ink-secondary)",
                 background: "none",
                 border: "none",

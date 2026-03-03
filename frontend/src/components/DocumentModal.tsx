@@ -79,10 +79,10 @@ export default function DocumentModal({ documentId, onClose }: Props) {
 
         <div style={{ flex: 1, overflowY: "auto", padding: "var(--space-lg)" }}>
           {loading && (
-            <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>Loading document…</p>
+            <p style={{ fontSize: "15px", color: "var(--ink-muted)" }}>Loading document…</p>
           )}
           {error && (
-            <p style={{ fontSize: "13px", color: "var(--color-error)" }}>Failed to load document.</p>
+            <p style={{ fontSize: "15px", color: "var(--color-error)" }}>Failed to load document.</p>
           )}
           {doc && (
             <>
@@ -93,13 +93,13 @@ export default function DocumentModal({ documentId, onClose }: Props) {
                     href={doc.source_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ fontSize: "12px", color: "var(--ink-muted)", textDecoration: "none" }}
+                    style={{ fontSize: "14px", color: "var(--ink-muted)", textDecoration: "none" }}
                   >
                     Open original ↗
                   </a>
                 )}
               </div>
-              <p style={{ fontSize: "13px", color: "var(--ink-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.7, margin: 0 }}>
+              <p style={{ fontSize: "15px", color: "var(--ink-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.7, margin: 0 }}>
                 {doc.content}
               </p>
             </>

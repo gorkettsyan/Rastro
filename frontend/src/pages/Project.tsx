@@ -3,10 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { toast } from "../store/toast";
-import SearchBar from "../components/SearchBar";
-import SearchResult from "../components/SearchResult";
 import ProjectMembers from "../components/ProjectMembers";
-import { CitedChunk } from "../components/CitationCard";
 import LearningHint from "../components/LearningHint";
 
 interface ProjectData {
@@ -33,13 +30,6 @@ interface Obligation {
   status: string;
 }
 
-interface SearchState {
-  query: string;
-  answer: string;
-  chunks: CitedChunk[];
-  streaming: boolean;
-}
-
 function statusPillClass(status: string) {
   if (status === "done") return "r-pill indexed";
   if (status === "error") return "r-pill error";
@@ -54,7 +44,7 @@ export default function Project() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [obligations, setObligations] = useState<Obligation[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [searchState, setSearchState] = useState<SearchState | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -96,7 +86,7 @@ export default function Project() {
   if (!project) {
     return (
       <main className="r-main">
-        <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("loading")}</p>
+        <p style={{ fontSize: "15px", color: "var(--ink-muted)" }}>{t("loading")}</p>
       </main>
     );
   }
@@ -123,18 +113,26 @@ export default function Project() {
         </span>
       </div>
 
-      {/* Project-scoped search */}
-      <div>
-        <SearchBar projectId={id} onResult={setSearchState} />
-        {searchState && (
-          <SearchResult
-            query={searchState.query}
-            answer={searchState.answer}
-            chunks={searchState.chunks}
-            streaming={searchState.streaming}
-          />
-        )}
-      </div>
+      {/* Project-scoped search — navigates to /search */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const q = searchQuery.trim();
+          if (q) navigate(`/search?q=${encodeURIComponent(q)}&project_id=${id}`);
+        }}
+        className="r-search-wrap"
+      >
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t("search_placeholder")}
+          className="r-search-input"
+        />
+        <button type="submit" disabled={!searchQuery.trim()} className="r-search-btn">
+          ↵
+        </button>
+      </form>
 
       {/* Documents */}
       <div className="r-section">
@@ -170,7 +168,7 @@ export default function Project() {
                 </span>
                 <button
                   className="r-btn-ghost"
-                  style={{ padding: "2px 8px", fontSize: "12px", color: "var(--color-error)" }}
+                  style={{ padding: "2px 8px", fontSize: "14px", color: "var(--color-error)" }}
                   onClick={async (e) => {
                     e.stopPropagation();
                     if (!confirm(t("delete") + " " + doc.title + "?")) return;
@@ -212,7 +210,7 @@ export default function Project() {
                 </span>
                 <span className="r-doc-title">{ob.description}</span>
                 {ob.due_date && (
-                  <span style={{ fontSize: "12px", color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: "14px", color: "var(--ink-muted)", whiteSpace: "nowrap" }}>
                     {new Date(ob.due_date).toLocaleDateString()}
                   </span>
                 )}

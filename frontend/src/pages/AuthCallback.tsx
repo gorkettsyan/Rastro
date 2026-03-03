@@ -29,7 +29,7 @@ export default function AuthCallback() {
 
   return (
     <div className="r-login-page">
-      <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>Iniciando sesión...</p>
+      <p style={{ fontSize: "15px", color: "var(--ink-muted)" }}>Iniciando sesión...</p>
     </div>
   );
 }

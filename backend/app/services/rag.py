@@ -372,6 +372,56 @@ class RAGService:
         await db.flush()
 
         try:
+            # 0. Intent + specificity classification — skip RAG for casual or vague queries
+            try:
+                intent_resp = await self._openai.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {"role": "system", "content": (
+                            "Classify this user message into exactly one category:\n"
+                            "'chat' = casual conversation, greetings, thanks, small talk, or meta-questions about the assistant.\n"
+                            "'vague' = a real search intent but too generic to produce useful results. "
+                            "Examples: a single common word like 'contrato', 'documento', 'ley', 'plazo', or very broad "
+                            "terms with no specific aspect indicated. A query is vague when it names a broad topic but "
+                            "does NOT specify what aspect, clause, condition, or question about that topic.\n"
+                            "'search' = a specific enough query to find useful information. Even short queries count as "
+                            "'search' if they name a specific law (e.g. 'LCSP', 'LOPDGDD'), a specific clause type "
+                            "(e.g. 'penalización', 'cláusula de rescisión'), or ask a concrete question.\n"
+                            "Respond with a single word: chat, vague, or search."
+                        )},
+                        {"role": "user", "content": query},
+                    ],
+                    temperature=0,
+                    max_tokens=5,
+                )
+                intent = intent_resp.choices[0].message.content.strip().lower()
+                if intent == "chat":
+                    yield f"data: {json.dumps({'type': 'sources', 'sources': []})}\n\n"
+                    yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                    log_entry.result_count = 0
+                    log_entry.latency_ms = int((time.monotonic() - start) * 1000)
+                    await db.flush()
+                    return
+                if intent == "vague":
+                    vague_msg = (
+                        "Tu búsqueda es demasiado general. Prueba a ser más específico: "
+                        "¿qué aspecto del tema te interesa? Por ejemplo, en lugar de "
+                        "\"contrato\", prueba \"cláusula de penalización en contratos de servicios\"."
+                        if language == "es" else
+                        "Your search is too broad. Try being more specific: "
+                        "what aspect are you interested in? For example, instead of "
+                        "\"contract\", try \"penalty clause in service contracts\"."
+                    )
+                    yield f"data: {json.dumps({'type': 'token', 'content': vague_msg})}\n\n"
+                    yield f"data: {json.dumps({'type': 'sources', 'sources': []})}\n\n"
+                    yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                    log_entry.result_count = 0
+                    log_entry.latency_ms = int((time.monotonic() - start) * 1000)
+                    await db.flush()
+                    return
+            except Exception:
+                pass  # default to search on failure
+
             # 1. Query rewriting + document-vocabulary expansion (parallel)
             rewritten, doc_query = await asyncio.gather(
                 self._rewrite_query(query),

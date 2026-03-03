@@ -42,7 +42,7 @@ export default function NewProject() {
 
   const labelStyle = {
     display: "block",
-    fontSize: "12px",
+    fontSize: "14px",
     fontWeight: 500,
     color: "var(--ink-secondary)",
     marginBottom: "var(--space-xs)",

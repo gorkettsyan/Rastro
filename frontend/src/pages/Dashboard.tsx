@@ -3,9 +3,6 @@ import { useNavigate, Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../store/auth";
 import { api } from "../api/client";
-import SearchBar from "../components/SearchBar";
-import SearchResult from "../components/SearchResult";
-import { CitedChunk } from "../components/CitationCard";
 import UpcomingObligations from "../components/UpcomingObligations";
 import LearningHint from "../components/LearningHint";
 
@@ -23,13 +20,6 @@ interface Document {
   source: string;
   indexing_status: string;
   project_id: string | null;
-}
-
-interface SearchState {
-  query: string;
-  answer: string;
-  chunks: CitedChunk[];
-  streaming: boolean;
 }
 
 function SourceIcon({ source }: { source: string }) {
@@ -69,7 +59,7 @@ export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchState, setSearchState] = useState<SearchState | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [showEmails, setShowEmails] = useState(false);
   const [emailCount, setEmailCount] = useState(0);
   const [obligationCount, setObligationCount] = useState(0);
@@ -120,18 +110,26 @@ export default function Dashboard() {
     <main className="r-main">
       <LearningHint textKey="hint_dashboard" />
 
-      {/* Global search */}
-      <div>
-        <SearchBar onResult={setSearchState} />
-        {searchState && (
-          <SearchResult
-            query={searchState.query}
-            answer={searchState.answer}
-            chunks={searchState.chunks}
-            streaming={searchState.streaming}
-          />
-        )}
-      </div>
+      {/* Global search — navigates to /search */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const q = searchQuery.trim();
+          if (q) navigate(`/search?q=${encodeURIComponent(q)}`);
+        }}
+        className="r-search-wrap"
+      >
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t("search_placeholder")}
+          className="r-search-input"
+        />
+        <button type="submit" disabled={!searchQuery.trim()} className="r-search-btn">
+          ↵
+        </button>
+      </form>
 
       {!loading && (
         <div className="r-stats-row">
@@ -162,7 +160,7 @@ export default function Dashboard() {
         </div>
 
         {loading ? (
-          <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("loading")}</p>
+          <p style={{ fontSize: "15px", color: "var(--ink-muted)" }}>{t("loading")}</p>
         ) : projects.length === 0 ? (
           <div className="r-empty">
             <span className="r-empty-icon">📁</span>

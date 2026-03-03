@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 const NAV_ITEMS = [
   { key: "nav_dashboard", path: "/dashboard", icon: "grid" },
+  { key: "nav_search", path: "/search", icon: "search" },
   { key: "nav_chat", path: "/chat", icon: "chat" },
   { key: "nav_obligations", path: "/obligations", icon: "calendar" },
   { key: "nav_clause_comparison", path: "/clause-comparison", icon: "compare" },
@@ -16,6 +17,8 @@ function NavIcon({ icon }: { icon: string }) {
   switch (icon) {
     case "grid":
       return <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>;
+    case "search":
+      return <svg {...props}><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>;
     case "chat":
       return <svg {...props}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>;
     case "calendar":

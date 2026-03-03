@@ -13,6 +13,7 @@ import Settings from "./pages/Settings";
 import InviteAccept from "./pages/InviteAccept";
 import Obligations from "./pages/Obligations";
 import ClauseComparison from "./pages/ClauseComparison";
+import Search from "./pages/Search";
 import Landing from "./pages/Landing";
 import AppLayout from "./components/AppLayout";
 import ToastContainer from "./components/ToastContainer";
@@ -37,6 +38,7 @@ export default function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/projects/new" element={<NewProject />} />
             <Route path="/projects/:id" element={<Project />} />
+            <Route path="/search" element={<Search />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/chat/:conversationId" element={<Chat />} />
             <Route path="/obligations" element={<Obligations />} />

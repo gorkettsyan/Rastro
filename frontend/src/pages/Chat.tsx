@@ -151,7 +151,7 @@ export default function Chat() {
           {messages.length === 0 && !streaming ? (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", textAlign: "center" }}>
               <p className="r-page-title" style={{ fontSize: "18px", marginBottom: "var(--space-sm)" }}>{t("conversation_empty")}</p>
-              <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("conversation_hint")}</p>
+              <p style={{ fontSize: "15px", color: "var(--ink-muted)" }}>{t("conversation_hint")}</p>
             </div>
           ) : (
             <>

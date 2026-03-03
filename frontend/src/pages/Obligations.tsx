@@ -169,7 +169,7 @@ export default function Obligations() {
           </div>
 
           {loading ? (
-            <p style={{ fontSize: "13px", color: "var(--ink-muted)" }}>{t("loading")}</p>
+            <p style={{ fontSize: "15px", color: "var(--ink-muted)" }}>{t("loading")}</p>
           ) : obligations.length === 0 ? (
             <div className="r-empty">
               <span className="r-empty-icon">📋</span>

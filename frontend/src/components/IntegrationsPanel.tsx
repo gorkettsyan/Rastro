@@ -49,7 +49,7 @@ export default function IntegrationsPanel() {
           <p style={{ fontSize: "14px", fontWeight: 500, color: "var(--ink-primary)", margin: 0 }}>
             Google Drive &amp; Gmail
           </p>
-          <p style={{ fontSize: "12px", color: "var(--ink-muted)", marginTop: "2px", marginBottom: 0 }}>
+          <p style={{ fontSize: "14px", color: "var(--ink-muted)", marginTop: "2px", marginBottom: 0 }}>
             {google.connected ? (
               <>
                 <span style={{ color: "var(--color-success)" }}>{t("connected")}</span>
@@ -69,7 +69,7 @@ export default function IntegrationsPanel() {
             onClick={handleSync}
             disabled={syncing}
             className="r-btn-ghost"
-            style={{ fontSize: "12px", padding: "6px 12px" }}
+            style={{ fontSize: "14px", padding: "6px 12px" }}
           >
             {syncing ? t("syncing") : t("sync_now")}
           </button>
@@ -77,7 +77,7 @@ export default function IntegrationsPanel() {
       </div>
 
       {!google.connected && (
-        <p style={{ fontSize: "12px", color: "var(--color-warning)", marginTop: "var(--space-sm)" }}>
+        <p style={{ fontSize: "14px", color: "var(--color-warning)", marginTop: "var(--space-sm)" }}>
           {t("next_step")}
         </p>
       )}

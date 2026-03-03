@@ -63,7 +63,7 @@ export default function MemoryPage() {
           </button>
         )}
       </div>
-      <p style={{ fontSize: "13px", color: "var(--ink-muted)", margin: "0 0 var(--space-xl) 0" }}>
+      <p style={{ fontSize: "15px", color: "var(--ink-muted)", margin: "0 0 var(--space-xl) 0" }}>
         {t("memories_subtitle")}
       </p>
 
@@ -103,7 +103,7 @@ export default function MemoryPage() {
                   <div style={{ display: "flex", gap: "var(--space-sm)" }}>
                     <input
                       className="r-memory-input"
-                      style={{ flex: 1, padding: "4px 10px", fontSize: "13px" }}
+                      style={{ flex: 1, padding: "4px 10px", fontSize: "15px" }}
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleEdit(m.id)}
@@ -113,7 +113,7 @@ export default function MemoryPage() {
                     <button onClick={() => setEditingId(null)} className="r-link-muted">✕</button>
                   </div>
                 ) : (
-                  <p style={{ fontSize: "13px", color: "var(--ink-primary)", margin: 0 }}>{m.content}</p>
+                  <p style={{ fontSize: "15px", color: "var(--ink-primary)", margin: 0 }}>{m.content}</p>
                 )}
               </div>
               {editingId !== m.id && (

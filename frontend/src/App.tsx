@@ -6,13 +6,10 @@ import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import NewProject from "./pages/NewProject";
 import Project from "./pages/Project";
-import Chat from "./pages/Chat";
 import MemoryPage from "./pages/Memory";
-import Integrations from "./pages/Integrations";
 import Settings from "./pages/Settings";
 import InviteAccept from "./pages/InviteAccept";
-import Obligations from "./pages/Obligations";
-import ClauseComparison from "./pages/ClauseComparison";
+import Projects from "./pages/Projects";
 import Search from "./pages/Search";
 import Landing from "./pages/Landing";
 import AppLayout from "./components/AppLayout";
@@ -36,15 +33,12 @@ export default function App() {
           <Route path="/invite/:token" element={<InviteAccept />} />
           <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/projects" element={<Projects />} />
             <Route path="/projects/new" element={<NewProject />} />
             <Route path="/projects/:id" element={<Project />} />
+            <Route path="/projects/:id/:tab" element={<Project />} />
             <Route path="/search" element={<Search />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/chat/:conversationId" element={<Chat />} />
-            <Route path="/obligations" element={<Obligations />} />
-            <Route path="/clause-comparison" element={<ClauseComparison />} />
             <Route path="/memory" element={<MemoryPage />} />
-            <Route path="/integrations" element={<Integrations />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

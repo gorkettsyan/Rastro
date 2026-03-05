@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { useAuthStore } from "../store/auth";
 import LearningHint from "../components/LearningHint";
+import IntegrationsPanel from "../components/IntegrationsPanel";
 
 interface TeamMember {
   id: string;
@@ -189,6 +190,9 @@ export default function Settings() {
         </div>
         {inviteError && <p className="r-invite-error">{inviteError}</p>}
       </div>
+
+      {/* Integrations */}
+      <IntegrationsPanel />
 
       {/* Pending invites */}
       {invites && invites.length > 0 && (

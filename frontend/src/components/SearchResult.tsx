@@ -8,9 +8,10 @@ interface Props {
   answer: string;
   chunks: CitedChunk[];
   streaming: boolean;
+  showProjectLabels?: boolean;
 }
 
-export default function SearchResult({ query, answer, chunks, streaming }: Props) {
+export default function SearchResult({ query, answer, chunks, streaming, showProjectLabels }: Props) {
   const { t } = useTranslation();
   const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
 
@@ -37,10 +38,11 @@ export default function SearchResult({ query, answer, chunks, streaming }: Props
           <p style={{ fontSize: "14px", color: "var(--ink-muted)", marginTop: "12px" }}>{t("no_results")}</p>
         )}
 
+        {/* Private document results — always shown first */}
         {docChunks.length > 0 && (
           <div style={{ marginTop: "var(--space-md)" }}>
-            <p className="r-section-label" style={{ marginBottom: "var(--space-sm)" }}>
-              {t("your_documents")}
+            <p className="r-section-label r-source-label" style={{ marginBottom: "var(--space-sm)" }}>
+              {showProjectLabels ? t("your_documents") : t("source_label_project")}
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {docChunks.map((chunk, i) => (
@@ -49,17 +51,19 @@ export default function SearchResult({ query, answer, chunks, streaming }: Props
                   index={chunks.indexOf(chunk) + 1}
                   source={chunk}
                   onExpand={setExpandedDocId}
-                  showAddToProject
+                  showAddToProject={showProjectLabels}
+                  showProjectLabel={showProjectLabels}
                 />
               ))}
             </div>
           </div>
         )}
 
+        {/* Legislation and case law — separate section */}
         {boeChunks.length > 0 && (
-          <div style={{ marginTop: "var(--space-md)" }}>
-            <p className="r-section-label" style={{ marginBottom: "var(--space-sm)" }}>
-              {t("source_boe")}
+          <div style={{ marginTop: "var(--space-lg)" }}>
+            <p className="r-section-label r-source-label" style={{ marginBottom: "var(--space-sm)" }}>
+              {t("legislation_section_label")}
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {boeChunks.map((chunk, i) => (

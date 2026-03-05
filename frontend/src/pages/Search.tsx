@@ -84,7 +84,6 @@ export default function Search() {
     }
   };
 
-  // Auto-search when arriving with ?q= param
   useEffect(() => {
     const q = searchParams.get("q");
     if (q && q !== executedRef.current) {
@@ -107,17 +106,19 @@ export default function Search() {
 
   return (
     <main className="r-main" style={{ maxWidth: 800 }}>
+      <h1 className="r-page-title">{t("nav_search")}</h1>
+
       <form onSubmit={handleSubmit} className="r-search-wrap">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder={t("search_placeholder")}
+          placeholder={projectId ? t("search_in_project_placeholder") : t("search_all_projects_placeholder")}
           className="r-search-input"
           autoFocus
         />
         <button type="submit" disabled={!input.trim()} className="r-search-btn">
-          ↵
+          &crarr;
         </button>
       </form>
 
@@ -127,12 +128,19 @@ export default function Search() {
         </p>
       )}
 
+      {!projectId && searchState && !searchState.streaming && searchState.chunks.length > 0 && (
+        <p style={{ fontSize: "13px", color: "var(--ink-secondary)", marginTop: "var(--space-xs)" }}>
+          {t("cross_project_search_note")}
+        </p>
+      )}
+
       {searchState && (
         <SearchResult
           query={searchState.query}
           answer={searchState.answer}
           chunks={searchState.chunks}
           streaming={searchState.streaming}
+          showProjectLabels={!projectId}
         />
       )}
     </main>

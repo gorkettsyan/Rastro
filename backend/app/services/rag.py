@@ -372,22 +372,16 @@ class RAGService:
         await db.flush()
 
         try:
-            # 0. Intent + specificity classification — skip RAG for casual or vague queries
+            # 0. Intent classification — skip RAG for greetings / casual queries
             try:
                 intent_resp = await self._openai.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[
                         {"role": "system", "content": (
-                            "Classify this user message into exactly one category:\n"
+                            "Classify this user message as either 'search' or 'chat'.\n"
+                            "'search' = the user wants information from documents, contracts, files, or data.\n"
                             "'chat' = casual conversation, greetings, thanks, small talk, or meta-questions about the assistant.\n"
-                            "'vague' = a real search intent but too generic to produce useful results. "
-                            "Examples: a single common word like 'contrato', 'documento', 'ley', 'plazo', or very broad "
-                            "terms with no specific aspect indicated. A query is vague when it names a broad topic but "
-                            "does NOT specify what aspect, clause, condition, or question about that topic.\n"
-                            "'search' = a specific enough query to find useful information. Even short queries count as "
-                            "'search' if they name a specific law (e.g. 'LCSP', 'LOPDGDD'), a specific clause type "
-                            "(e.g. 'penalización', 'cláusula de rescisión'), or ask a concrete question.\n"
-                            "Respond with a single word: chat, vague, or search."
+                            "Respond with a single word: search or chat."
                         )},
                         {"role": "user", "content": query},
                     ],
@@ -396,23 +390,6 @@ class RAGService:
                 )
                 intent = intent_resp.choices[0].message.content.strip().lower()
                 if intent == "chat":
-                    yield f"data: {json.dumps({'type': 'sources', 'sources': []})}\n\n"
-                    yield f"data: {json.dumps({'type': 'done'})}\n\n"
-                    log_entry.result_count = 0
-                    log_entry.latency_ms = int((time.monotonic() - start) * 1000)
-                    await db.flush()
-                    return
-                if intent == "vague":
-                    vague_msg = (
-                        "Tu búsqueda es demasiado general. Prueba a ser más específico: "
-                        "¿qué aspecto del tema te interesa? Por ejemplo, en lugar de "
-                        "\"contrato\", prueba \"cláusula de penalización en contratos de servicios\"."
-                        if language == "es" else
-                        "Your search is too broad. Try being more specific: "
-                        "what aspect are you interested in? For example, instead of "
-                        "\"contract\", try \"penalty clause in service contracts\"."
-                    )
-                    yield f"data: {json.dumps({'type': 'token', 'content': vague_msg})}\n\n"
                     yield f"data: {json.dumps({'type': 'sources', 'sources': []})}\n\n"
                     yield f"data: {json.dumps({'type': 'done'})}\n\n"
                     log_entry.result_count = 0

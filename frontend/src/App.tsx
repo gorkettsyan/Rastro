@@ -10,7 +10,7 @@ import MemoryPage from "./pages/Memory";
 import Settings from "./pages/Settings";
 import InviteAccept from "./pages/InviteAccept";
 import Projects from "./pages/Projects";
-import Search from "./pages/Search";
+import Chat from "./pages/Chat";
 import Landing from "./pages/Landing";
 import AppLayout from "./components/AppLayout";
 import ToastContainer from "./components/ToastContainer";
@@ -37,7 +37,9 @@ export default function App() {
             <Route path="/projects/new" element={<NewProject />} />
             <Route path="/projects/:id" element={<Project />} />
             <Route path="/projects/:id/:tab" element={<Project />} />
-            <Route path="/search" element={<Search />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/chat/:conversationId" element={<Chat />} />
+            <Route path="/search" element={<Navigate to="/chat" replace />} />
             <Route path="/memory" element={<MemoryPage />} />
             <Route path="/settings" element={<Settings />} />
           </Route>

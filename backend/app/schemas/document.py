@@ -10,6 +10,7 @@ class DocumentOut(BaseModel):
     title: str
     source: str
     source_url: str | None
+    drive_folder_id: str | None = None
     chunk_count: int
     indexing_status: str
     visibility: str

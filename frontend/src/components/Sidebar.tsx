@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next";
 const NAV_ITEMS = [
   { key: "nav_home", path: "/dashboard", icon: "home" },
   { key: "nav_projects", path: "/projects", icon: "folder" },
-  { key: "nav_search", path: "/search", icon: "search" },
+  { key: "nav_chat", path: "/chat", icon: "chat" },
+  { key: "memories", path: "/memory", icon: "brain" },
 ];
 
 function NavIcon({ icon }: { icon: string }) {
@@ -15,8 +16,10 @@ function NavIcon({ icon }: { icon: string }) {
       return <svg {...props}><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1h-2z" /></svg>;
     case "folder":
       return <svg {...props}><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>;
-    case "search":
-      return <svg {...props}><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>;
+    case "chat":
+      return <svg {...props}><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" /></svg>;
+    case "brain":
+      return <svg {...props}><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z" /><path d="M10 21h4" /><path d="M9 17h6" /></svg>;
     default:
       return null;
   }

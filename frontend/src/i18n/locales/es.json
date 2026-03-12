@@ -176,6 +176,7 @@
   "summary_translated": "Resumen traducido del documento original",
 
   "tab_ask": "Preguntar",
+  "tab_search": "Buscar",
   "tab_documents": "Documentos",
   "tab_obligations": "Obligaciones",
   "tab_clauses": "Clausulas",
@@ -246,5 +247,23 @@
   "boe_disclaimer": "Legislacion consolidada — puede haber sido actualizada",
   "boe_disclaimer_full": "Las fuentes del BOE corresponden a legislacion consolidada del Boletin Oficial del Estado. Verifica siempre la version vigente en boe.es antes de tomar decisiones legales.",
   "boe_law": "Ley",
-  "boe_article": "Articulo"
+  "boe_article": "Articulo",
+
+  "folder_mappings": "Sincronizacion de carpetas de Drive",
+  "add_folder_mapping": "Mapear carpeta",
+  "select_folder": "Selecciona una carpeta de Drive...",
+  "folder_already_mapped": "Esta carpeta ya esta mapeada",
+  "no_folder_mappings": "Sin carpetas mapeadas",
+  "no_folder_mappings_desc": "Mapea una carpeta de Google Drive para asignar automaticamente sus archivos a este proyecto durante la sincronizacion.",
+  "unassigned_documents": "Documentos sin asignar",
+  "unassigned_documents_desc": "Estos documentos no estan asignados a ningun proyecto. Seleccionalos y asignalos.",
+  "no_unassigned": "Todos los documentos estan asignados a proyectos.",
+  "assign_to_project": "Asignar a proyecto",
+  "assign": "Asignar",
+  "selected_count": "{{count}} seleccionados",
+  "assigned_success": "Documentos asignados correctamente",
+  "google_not_connected_folders": "Conecta Google Drive en Ajustes para mapear carpetas.",
+
+  "chat_global_title": "Pregunta sobre tus documentos",
+  "chat_global_hint": "Haz cualquier pregunta sobre todos los documentos de tu organizacion. Las respuestas citan las fuentes originales."
 }

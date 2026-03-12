@@ -21,16 +21,16 @@ export default function AppLayout() {
     const q = searchQuery.trim();
     if (!q) return;
     if (isInProject) {
-      navigate(`/search?q=${encodeURIComponent(q)}&project_id=${projectMatch![1]}`);
+      navigate(`/projects/${projectMatch![1]}/search?q=${encodeURIComponent(q)}`);
     } else {
-      navigate(`/search?q=${encodeURIComponent(q)}`);
+      navigate("/chat");
     }
     setSearchQuery("");
   };
 
   const placeholder = isInProject
     ? t("search_in_project_placeholder")
-    : t("search_all_projects_placeholder");
+    : t("type_message");
 
   return (
     <div className="r-app">

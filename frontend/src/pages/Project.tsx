@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useSearchParams as useURLSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import { toast } from "../store/toast";
@@ -36,29 +36,6 @@ interface Obligation {
   confidence: number;
 }
 
-interface Conversation {
-  id: string;
-  title: string | null;
-  updated_at: string;
-  project_id: string | null;
-}
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  sources: any[];
-}
-
-interface Source {
-  document_id: string;
-  title: string;
-  source: string;
-  source_url: string | null;
-  score: number;
-  excerpt: string;
-}
-
 interface ClauseResult {
   document_id: string;
   title: string;
@@ -77,9 +54,9 @@ interface MissingDoc {
   title: string;
 }
 
-type TabKey = "ask" | "documents" | "obligations" | "clauses";
+type TabKey = "search" | "documents" | "obligations" | "clauses";
 
-const TABS: TabKey[] = ["ask", "documents", "obligations", "clauses"];
+const TABS: TabKey[] = ["search", "documents", "obligations", "clauses"];
 
 const TYPE_OPTIONS = [
   "termination_notice", "renewal_window", "payment_due",
@@ -106,15 +83,17 @@ export default function Project() {
 
   const [project, setProject] = useState<ProjectData | null>(null);
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [activeTab, setActiveTab] = useState<TabKey>("ask");
+  const [activeTab, setActiveTab] = useState<TabKey>("search");
 
   // Resolve tab from URL param
   useEffect(() => {
-    if (tabParam && TABS.includes(tabParam as TabKey)) {
+    if (tabParam === "ask") {
+      // Redirect old "ask" URLs to "search"
+      navigate(`/projects/${id}/search`, { replace: true });
+    } else if (tabParam && TABS.includes(tabParam as TabKey)) {
       setActiveTab(tabParam as TabKey);
     } else if (!tabParam) {
-      // Default: Ask if docs exist, Documents otherwise
-      setActiveTab(documents.length >= 3 ? "ask" : "documents");
+      setActiveTab(documents.length >= 3 ? "search" : "documents");
     }
   }, [tabParam]);
 
@@ -129,7 +108,7 @@ export default function Project() {
         setDocuments(d.data.items);
         // Set default tab based on doc count (only on initial load)
         if (!tabParam) {
-          setActiveTab((d.data.items || []).length >= 3 ? "ask" : "documents");
+          setActiveTab((d.data.items || []).length >= 3 ? "search" : "documents");
         }
       })
       .catch(() => navigate("/dashboard"));
@@ -174,12 +153,15 @@ export default function Project() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "ask" && id && <AskTab projectId={id} projectTitle={project.title} />}
+      {activeTab === "search" && id && <SearchTab projectId={id} />}
       {activeTab === "documents" && id && (
         <DocumentsTab projectId={id} documents={documents} setDocuments={setDocuments} />
       )}
       {activeTab === "obligations" && id && <ObligationsTab projectId={id} />}
       {activeTab === "clauses" && id && <ClausesTab projectId={id} />}
+
+      {/* Folder mappings (Documents tab only) */}
+      {activeTab === "documents" && id && <FolderMappingsSection projectId={id} />}
 
       {/* Project members (always visible at bottom) */}
       {id && activeTab === "documents" && <ProjectMembers projectId={id} />}
@@ -187,186 +169,126 @@ export default function Project() {
   );
 }
 
-/* ─── Ask Tab ─── */
+/* ─── Search Tab ─── */
 
-function AskTab({ projectId, projectTitle }: { projectId: string; projectTitle: string }) {
-  const { t } = useTranslation();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const [streamingContent, setStreamingContent] = useState("");
-  const [streamingSources, setStreamingSources] = useState<Source[]>([]);
-  const bottomRef = useRef<HTMLDivElement>(null);
+function SearchTab({ projectId }: { projectId: string }) {
+  const { t, i18n } = useTranslation();
+  const [searchParams] = useURLSearchParams();
+  const [input, setInput] = useState(searchParams.get("q") || "");
+  const [searchState, setSearchState] = useState<{
+    query: string;
+    answer: string;
+    chunks: CitedChunk[];
+    streaming: boolean;
+  } | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const executedRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    api.get("/chat", { params: { project_id: projectId } })
-      .then(({ data }) => setConversations(data.items))
-      .catch(() => {});
-  }, [projectId]);
+  const executeSearch = async (query: string) => {
+    if (!query.trim()) return;
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingContent]);
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
 
-  const loadConversation = async (convId: string) => {
-    setActiveConversationId(convId);
-    try {
-      const { data } = await api.get(`/chat/${convId}`);
-      setMessages(data.messages);
-    } catch {
-      setMessages([]);
-    }
-  };
+    setSearchState({ query, answer: "", chunks: [], streaming: true });
 
-  const handleSend = async () => {
-    if (!input.trim() || streaming) return;
-    const text = input.trim();
-    setInput("");
-
-    let convId = activeConversationId;
-
-    if (!convId) {
-      const { data } = await api.post("/chat", { first_message: text, project_id: projectId });
-      convId = data.id;
-      setActiveConversationId(convId);
-      setConversations((prev) => [data, ...prev]);
-    }
-
-    const tempUserMsg: Message = { id: crypto.randomUUID(), role: "user", content: text, sources: [] };
-    setMessages((prev) => [...prev, tempUserMsg]);
-    setStreaming(true);
-    setStreamingContent("");
-    setStreamingSources([]);
+    const token = localStorage.getItem("rastro_token");
+    const base = import.meta.env.VITE_API_URL ?? "";
+    const params = new URLSearchParams({ q: query, lang: i18n.language || "es", project_id: projectId });
 
     try {
-      const resp = await fetch(
-        `${import.meta.env.VITE_API_URL}/chat/${convId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("rastro_token")}`,
-          },
-          body: JSON.stringify({ message: text, language: localStorage.getItem("rastro_lang") || "es" }),
-        }
-      );
+      const resp = await fetch(`${base}/search/stream?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: abortRef.current.signal,
+      });
 
-      const reader = resp.body!.getReader();
+      if (!resp.ok || !resp.body) {
+        setSearchState({ query, answer: "", chunks: [], streaming: false });
+        return;
+      }
+
+      const reader = resp.body.getReader();
       const decoder = new TextDecoder();
-      let fullContent = "";
-      let finalSources: Source[] = [];
+      let answer = "";
+      let chunks: CitedChunk[] = [];
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const lines = decoder.decode(value).split("\n");
+        buffer += decoder.decode(value, { stream: true });
+
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
-          const event = JSON.parse(line.slice(6));
-          if (event.type === "token") {
-            fullContent += event.content;
-            setStreamingContent(fullContent);
-          }
-          if (event.type === "sources") {
-            finalSources = event.sources;
-            setStreamingSources(finalSources);
-          }
-          if (event.type === "done") {
-            setMessages((prev) => [
-              ...prev,
-              { id: crypto.randomUUID(), role: "assistant", content: fullContent, sources: finalSources },
-            ]);
-            setStreamingContent("");
-            setStreamingSources([]);
-            setStreaming(false);
+          try {
+            const event = JSON.parse(line.slice(6));
+            if (event.type === "token") {
+              answer += event.content;
+              setSearchState({ query, answer, chunks, streaming: true });
+            } else if (event.type === "sources") {
+              chunks = event.sources;
+              setSearchState({ query, answer, chunks, streaming: true });
+            } else if (event.type === "done") {
+              setSearchState({ query, answer, chunks, streaming: false });
+            }
+          } catch {
+            // ignore malformed line
           }
         }
       }
-    } catch {
-      setStreaming(false);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name !== "AbortError") {
+        setSearchState({ query, answer: "", chunks: [], streaming: false });
+      }
     }
   };
 
+  // Auto-execute if query comes from topbar search
+  useEffect(() => {
+    const q = searchParams.get("q");
+    if (q && q !== executedRef.current) {
+      executedRef.current = q;
+      setInput(q);
+      executeSearch(q);
+    }
+  }, [searchParams]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    executedRef.current = trimmed;
+    executeSearch(trimmed);
+  };
+
   return (
-    <div className="r-ask-tab">
-      {/* Conversation history selector */}
-      {conversations.length > 0 && (
-        <div className="r-ask-conversations">
-          <button
-            className={`r-ask-conv-btn${!activeConversationId ? " active" : ""}`}
-            onClick={() => { setActiveConversationId(null); setMessages([]); }}
-          >
-            + {t("new_conversation")}
-          </button>
-          {conversations.slice(0, 5).map((c) => (
-            <button
-              key={c.id}
-              className={`r-ask-conv-btn${activeConversationId === c.id ? " active" : ""}`}
-              onClick={() => loadConversation(c.id)}
-            >
-              {c.title || t("conversation_empty")}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Messages */}
-      <div className="r-ask-messages">
-        {messages.length === 0 && !streaming ? (
-          <div className="r-ask-empty">
-            <p className="r-ask-empty-title">{t("ask_about_project_title", { project: projectTitle })}</p>
-            <p className="r-ask-empty-hint">{t("ask_about_project_hint")}</p>
-          </div>
-        ) : (
-          <>
-            {messages.map((m) => (
-              <div key={m.id} className={`r-ask-msg r-ask-msg--${m.role}`}>
-                <div className="r-ask-msg-content">{m.content}</div>
-                {m.role === "assistant" && m.sources?.length > 0 && (
-                  <div className="r-ask-sources">
-                    {m.sources.map((s: any, i: number) => (
-                      <span key={i} className="r-ask-source-pill">
-                        {s.source_type === "boe" ? "BOE" : t("source_label_project")} — {s.title}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-            {streaming && (
-              <div className="r-ask-msg r-ask-msg--assistant">
-                <div className="r-ask-msg-content">
-                  {streamingContent || <span className="r-cursor" />}
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </>
-        )}
-      </div>
-
-      {/* Input */}
-      <div className="r-ask-input-wrap">
-        <textarea
-          className="r-ask-textarea"
-          rows={1}
-          placeholder={t("type_message")}
+    <div style={{ maxWidth: 800 }}>
+      <form onSubmit={handleSubmit} className="r-search-wrap">
+        <input
+          type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-          disabled={streaming}
+          placeholder={t("search_in_project_placeholder")}
+          className="r-search-input"
+          autoFocus
         />
-        <button onClick={handleSend} disabled={!input.trim() || streaming} className="r-ask-send-btn">
-          {streaming ? "\u2026" : "\u2191"}
+        <button type="submit" disabled={!input.trim()} className="r-search-btn">
+          &crarr;
         </button>
-      </div>
+      </form>
+
+      {searchState && (
+        <SearchResult
+          query={searchState.query}
+          answer={searchState.answer}
+          chunks={searchState.chunks}
+          streaming={searchState.streaming}
+          showProjectLabels={false}
+        />
+      )}
     </div>
   );
 }
@@ -622,6 +544,135 @@ function DaysLeftPill({ dueDate }: { dueDate: string }) {
   if (d === 0) return <span className="r-pill due-soon">{t("due_today")}</span>;
   if (d <= 7) return <span className="r-pill due-soon">{t("due_in_days", { count: d })}</span>;
   return <span className="r-pill on-track">{t("due_in_days", { count: d })}</span>;
+}
+
+/* ─── Folder Mappings ─── */
+
+interface FolderMapping {
+  id: string;
+  folder_id: string;
+  folder_name: string;
+  project_id: string;
+}
+
+interface DriveFolder {
+  id: string;
+  name: string;
+}
+
+function FolderMappingsSection({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
+  const [mappings, setMappings] = useState<FolderMapping[]>([]);
+  const [folders, setFolders] = useState<DriveFolder[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState("");
+  const [loadingFolders, setLoadingFolders] = useState(false);
+  const [connected, setConnected] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    api.get(`/folder-mappings?project_id=${projectId}`)
+      .then(({ data }) => setMappings(data.items))
+      .catch(() => {});
+    api.get("/integrations/status")
+      .then(({ data }) => setConnected(data.google.connected))
+      .catch(() => setConnected(false));
+  }, [projectId]);
+
+  const loadFolders = async () => {
+    if (folders.length > 0) return;
+    setLoadingFolders(true);
+    try {
+      const { data } = await api.get("/folder-mappings/drive-folders");
+      setFolders(data);
+    } catch {
+      /* empty */
+    }
+    setLoadingFolders(false);
+  };
+
+  const addMapping = async () => {
+    const folder = folders.find((f) => f.id === selectedFolder);
+    if (!folder) return;
+    try {
+      const { data } = await api.post("/folder-mappings", {
+        project_id: projectId,
+        folder_id: folder.id,
+        folder_name: folder.name,
+      });
+      setMappings((prev) => [data, ...prev]);
+      setSelectedFolder("");
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        toast.error(t("folder_already_mapped"));
+      }
+    }
+  };
+
+  const removeMapping = async (id: string) => {
+    await api.delete(`/folder-mappings/${id}`);
+    setMappings((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  return (
+    <div className="r-section">
+      <div className="r-section-header">
+        <p className="r-section-label">{t("folder_mappings")}</p>
+      </div>
+
+      {connected === false && (
+        <p style={{ fontSize: 13, color: "var(--ink-muted)" }}>
+          {t("google_not_connected_folders")}
+        </p>
+      )}
+
+      {connected && (
+        <div className="r-invite-row" style={{ marginBottom: "var(--space-md)" }}>
+          <select
+            className="r-select"
+            value={selectedFolder}
+            onClick={loadFolders}
+            onChange={(e) => setSelectedFolder(e.target.value)}
+          >
+            <option value="">{loadingFolders ? "..." : t("select_folder")}</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>{f.name}</option>
+            ))}
+          </select>
+          <button
+            className="r-btn-primary"
+            disabled={!selectedFolder}
+            onClick={addMapping}
+          >
+            {t("add_folder_mapping")}
+          </button>
+        </div>
+      )}
+
+      {mappings.length === 0 ? (
+        <div className="r-empty" style={{ padding: "var(--space-lg)" }}>
+          <p className="r-empty-title">{t("no_folder_mappings")}</p>
+          <p className="r-empty-desc">{t("no_folder_mappings_desc")}</p>
+        </div>
+      ) : (
+        <div className="r-doc-list">
+          {mappings.map((m) => (
+            <div key={m.id} className="r-doc-row">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-muted)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+              </svg>
+              <span className="r-doc-title">{m.folder_name}</span>
+              <button
+                className="r-btn-ghost"
+                style={{ padding: "2px 8px", fontSize: 14, color: "var(--color-error)" }}
+                onClick={() => removeMapping(m.id)}
+              >
+                {t("remove")}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ─── Clauses Tab ─── */

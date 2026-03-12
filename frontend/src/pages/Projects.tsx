@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuthStore } from "../store/auth";
 import { api } from "../api/client";
+import { toast } from "../store/toast";
 
 interface Project {
   id: string;
@@ -10,6 +11,14 @@ interface Project {
   client_name: string | null;
   status: string;
   updated_at: string;
+}
+
+interface UnassignedDoc {
+  id: string;
+  title: string;
+  source: string;
+  indexing_status: string;
+  created_at: string;
 }
 
 interface ProjectStats {
@@ -32,6 +41,9 @@ export default function Projects() {
   const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectStats, setProjectStats] = useState<ProjectStats>({});
+  const [unassigned, setUnassigned] = useState<UnassignedDoc[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [assignProject, setAssignProject] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,12 +53,14 @@ export default function Projects() {
           const { data } = await api.get("/auth/me");
           setUser(data);
         }
-        const [projectsRes, obligationsRes, docsRes] = await Promise.all([
+        const [projectsRes, obligationsRes, docsRes, unassignedRes] = await Promise.all([
           api.get("/projects"),
           api.get("/obligations", { params: { status: "open" } }),
           api.get("/documents"),
+          api.get("/folder-mappings/unassigned"),
         ]);
         setProjects(projectsRes.data.items);
+        setUnassigned(unassignedRes.data.items);
 
         const stats: ProjectStats = {};
         const docs = docsRes.data.items || [];
@@ -78,6 +92,38 @@ export default function Projects() {
     init();
   }, []);
 
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selected.size === unassigned.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(unassigned.map((d) => d.id)));
+    }
+  };
+
+  const handleAssign = async () => {
+    if (!assignProject || selected.size === 0) return;
+    try {
+      await api.post("/folder-mappings/assign-bulk", {
+        project_id: assignProject,
+        document_ids: Array.from(selected),
+      });
+      setUnassigned((prev) => prev.filter((d) => !selected.has(d.id)));
+      setSelected(new Set());
+      setAssignProject("");
+      toast.info(t("assigned_success"));
+    } catch {
+      toast.error(t("error"));
+    }
+  };
+
   if (loading) {
     return (
       <main className="r-main">
@@ -88,6 +134,77 @@ export default function Projects() {
 
   return (
     <main className="r-main">
+      {/* Unassigned documents inbox */}
+      {unassigned.length > 0 && (
+        <div className="r-section">
+          <div className="r-section-header">
+            <p className="r-section-label">{t("unassigned_documents")} ({unassigned.length})</p>
+            {selected.size > 0 && (
+              <div style={{ display: "flex", gap: "var(--space-sm)", alignItems: "center" }}>
+                <span style={{ fontSize: 13, color: "var(--ink-muted)" }}>
+                  {t("selected_count", { count: selected.size })}
+                </span>
+                <select
+                  className="r-select"
+                  value={assignProject}
+                  onChange={(e) => setAssignProject(e.target.value)}
+                  style={{ minWidth: 160 }}
+                >
+                  <option value="">{t("assign_to_project")}</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </select>
+                <button
+                  className="r-btn-primary"
+                  disabled={!assignProject}
+                  onClick={handleAssign}
+                >
+                  {t("assign")}
+                </button>
+              </div>
+            )}
+          </div>
+          <table className="r-table">
+            <thead>
+              <tr>
+                <th style={{ width: 32 }}>
+                  <input
+                    type="checkbox"
+                    checked={selected.size === unassigned.length && unassigned.length > 0}
+                    onChange={toggleAll}
+                  />
+                </th>
+                <th>{t("project_title")}</th>
+                <th>{t("source")}</th>
+                <th>{t("status")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {unassigned.map((doc) => (
+                <tr key={doc.id} className="r-table-row-link" onClick={() => toggleSelect(doc.id)}>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(doc.id)}
+                      onChange={() => toggleSelect(doc.id)}
+                    />
+                  </td>
+                  <td><span className="r-table-project-name">{doc.title}</span></td>
+                  <td className="r-table-muted">{t(`source_${doc.source}`)}</td>
+                  <td>
+                    <span className={`r-pill ${doc.indexing_status === "done" ? "indexed" : doc.indexing_status === "error" ? "error" : "processing"}`}>
+                      {t(doc.indexing_status === "done" ? "indexed" : doc.indexing_status === "error" ? "error" : "indexing")}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Projects table */}
       <div className="r-section">
         <div className="r-section-header">
           <p className="r-section-label">{t("projects")}</p>

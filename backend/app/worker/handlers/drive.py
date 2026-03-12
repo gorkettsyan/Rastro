@@ -1,8 +1,10 @@
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, update as sa_update
 from app.models.document import Document
+from app.models.chunk import Chunk
 from app.models.integration_token import IntegrationToken
+from app.models.folder_mapping import FolderMapping
 from app.security import decrypt
 from app.services.ingestion import ingestion_service
 from app.services.storage import storage_service
@@ -84,11 +86,19 @@ async def enqueue_all_drive_files(org_id: str, user_id: str, db: AsyncSession) -
     page_token = None
     jobs: list[dict] = []
 
+    # Load folder mappings for auto-assignment
+    mapping_result = await db.execute(
+        select(FolderMapping).where(FolderMapping.org_id == org_id)
+    )
+    folder_to_project: dict[str, uuid.UUID] = {
+        m.folder_id: m.project_id for m in mapping_result.scalars().all()
+    }
+
     # Pass 1: create Document rows, collect job payloads
     while True:
         resp = service.files().list(
             q=f"({mime_query}) and trashed=false",
-            fields="nextPageToken,files(id,name,mimeType)",
+            fields="nextPageToken,files(id,name,mimeType,parents)",
             pageSize=100,
             pageToken=page_token,
         ).execute()
@@ -102,6 +112,12 @@ async def enqueue_all_drive_files(org_id: str, user_id: str, db: AsyncSession) -
                 )
             )
             doc = existing.scalar_one_or_none()
+
+            # Determine folder and auto-assignment
+            parents = file.get("parents", [])
+            folder_id = parents[0] if parents else None
+            auto_project_id = folder_to_project.get(folder_id) if folder_id else None
+
             if not doc:
                 doc = ingestion_service.make_document(
                     user_id=uuid.UUID(user_id),
@@ -112,10 +128,25 @@ async def enqueue_all_drive_files(org_id: str, user_id: str, db: AsyncSession) -
                     source_id=file["id"],
                     source_url=f"https://drive.google.com/file/d/{file['id']}",
                     mime_type=file["mimeType"],
+                    drive_folder_id=folder_id,
                     indexing_status="pending",
+                    project_id=auto_project_id,
                 )
                 db.add(doc)
                 await db.flush()
+            else:
+                # Update folder_id if changed, and auto-assign if unassigned
+                if folder_id and doc.drive_folder_id != folder_id:
+                    doc.drive_folder_id = folder_id
+                if auto_project_id and not doc.project_id:
+                    doc.project_id = auto_project_id
+                    # Sync chunks
+                    await db.execute(
+                        sa_update(Chunk)
+                        .where(Chunk.document_id == doc.id)
+                        .values(project_id=auto_project_id)
+                    )
+                    await db.flush()
 
             jobs.append({
                 "job_type": "drive_file",

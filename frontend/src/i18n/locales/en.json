@@ -176,6 +176,7 @@
   "summary_translated": "Summary translated from original source",
 
   "tab_ask": "Ask",
+  "tab_search": "Search",
   "tab_documents": "Documents",
   "tab_obligations": "Obligations",
   "tab_clauses": "Clauses",
@@ -246,5 +247,23 @@
   "boe_disclaimer": "Consolidated legislation — may have been updated",
   "boe_disclaimer_full": "BOE sources correspond to consolidated legislation from the Boletin Oficial del Estado. Always verify the current version at boe.es before making legal decisions.",
   "boe_law": "Law",
-  "boe_article": "Article"
+  "boe_article": "Article",
+
+  "folder_mappings": "Drive folder sync",
+  "add_folder_mapping": "Map folder",
+  "select_folder": "Select a Drive folder...",
+  "folder_already_mapped": "This folder is already mapped",
+  "no_folder_mappings": "No folders mapped yet",
+  "no_folder_mappings_desc": "Map a Google Drive folder to automatically assign its files to this project during sync.",
+  "unassigned_documents": "Unassigned documents",
+  "unassigned_documents_desc": "These documents are not assigned to any project. Select documents and assign them.",
+  "no_unassigned": "All documents are assigned to projects.",
+  "assign_to_project": "Assign to project",
+  "assign": "Assign",
+  "selected_count": "{{count}} selected",
+  "assigned_success": "Documents assigned successfully",
+  "google_not_connected_folders": "Connect Google Drive in Settings to map folders.",
+
+  "chat_global_title": "Ask about your documents",
+  "chat_global_hint": "Ask any question across all your organization's documents. Answers cite the original sources."
 }

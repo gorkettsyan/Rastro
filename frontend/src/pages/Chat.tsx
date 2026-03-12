@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../api/client";
 import ConversationSidebar from "../components/ConversationSidebar";
@@ -33,9 +33,6 @@ export default function Chat() {
   const { conversationId } = useParams<{ conversationId?: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
-  const projectId = searchParams.get("project");
-
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -75,7 +72,7 @@ export default function Chat() {
     let activeConversationId = conversationId;
 
     if (!activeConversationId) {
-      const { data } = await api.post("/chat", { first_message: text, project_id: projectId || undefined });
+      const { data } = await api.post("/chat", { first_message: text });
       activeConversationId = data.id;
       setConversations((prev) => [data, ...prev]);
       navigate(`/chat/${activeConversationId}`, { replace: true });

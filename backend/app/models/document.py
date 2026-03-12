@@ -20,6 +20,7 @@ class Document(Base):
     source: Mapped[str] = mapped_column(String(50), nullable=False)  # drive | gmail | upload
     source_id: Mapped[str | None] = mapped_column(String(500), nullable=True)
     source_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    drive_folder_id: Mapped[str | None] = mapped_column(String(500), nullable=True)
     file_path: Mapped[str | None] = mapped_column(Text, nullable=True)  # S3 key
     content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)

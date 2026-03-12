@@ -6,6 +6,7 @@ import { toast } from "../store/toast";
 import ProjectMembers from "../components/ProjectMembers";
 import SearchResult from "../components/SearchResult";
 import { CitedChunk } from "../components/CitationCard";
+import EntityGraph, { type GraphNode, type GraphEdge } from "../components/EntityGraph";
 
 interface ProjectData {
   id: string;
@@ -21,19 +22,6 @@ interface Document {
   source: string;
   indexing_status: string;
   chunk_count: number;
-}
-
-interface Obligation {
-  id: string;
-  obligation_type: string;
-  description: string;
-  due_date: string | null;
-  date_unresolved: boolean;
-  status: string;
-  source: string;
-  document_title: string | null;
-  document_id: string | null;
-  confidence: number;
 }
 
 interface ClauseResult {
@@ -54,26 +42,14 @@ interface MissingDoc {
   title: string;
 }
 
-type TabKey = "search" | "documents" | "obligations" | "clauses";
+type TabKey = "search" | "documents" | "clauses" | "knowledge";
 
-const TABS: TabKey[] = ["search", "documents", "obligations", "clauses"];
-
-const TYPE_OPTIONS = [
-  "termination_notice", "renewal_window", "payment_due",
-  "option_exercise", "warranty_expiry", "other",
-];
+const TABS: TabKey[] = ["search", "documents", "clauses", "knowledge"];
 
 function statusPillClass(status: string) {
   if (status === "done") return "r-pill indexed";
   if (status === "error") return "r-pill error";
   return "r-pill processing";
-}
-
-function daysLeft(dueDate: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate + "T00:00:00");
-  return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
 export default function Project() {
@@ -157,8 +133,8 @@ export default function Project() {
       {activeTab === "documents" && id && (
         <DocumentsTab projectId={id} documents={documents} setDocuments={setDocuments} />
       )}
-      {activeTab === "obligations" && id && <ObligationsTab projectId={id} />}
       {activeTab === "clauses" && id && <ClausesTab projectId={id} />}
+      {activeTab === "knowledge" && id && <KnowledgeTab projectId={id} />}
 
       {/* Folder mappings (Documents tab only) */}
       {activeTab === "documents" && id && <FolderMappingsSection projectId={id} />}
@@ -383,167 +359,6 @@ function DocumentsTab({
       )}
     </div>
   );
-}
-
-/* ─── Obligations Tab ─── */
-
-function ObligationsTab({ projectId }: { projectId: string }) {
-  const { t } = useTranslation();
-  const [obligations, setObligations] = useState<Obligation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterStatus, setFilterStatus] = useState("open");
-  const [showModal, setShowModal] = useState(false);
-  const [newDesc, setNewDesc] = useState("");
-  const [newType, setNewType] = useState("other");
-  const [newDueDate, setNewDueDate] = useState("");
-  const [scanning, setScanning] = useState(false);
-
-  const fetchObligations = async () => {
-    const params: Record<string, string> = { project_id: projectId };
-    if (filterStatus) params.status = filterStatus;
-    if (filterStatus === "") params.include_resolved = "true";
-    try {
-      const res = await api.get("/obligations", { params });
-      setObligations(res.data.items);
-    } catch { /* empty */ }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    setLoading(true);
-    fetchObligations();
-  }, [filterStatus, projectId]);
-
-  const toggleStatus = async (ob: Obligation) => {
-    const newStatus = ob.status === "open" ? "resolved" : "open";
-    await api.patch(`/obligations/${ob.id}`, { status: newStatus });
-    fetchObligations();
-  };
-
-  const deleteObligation = async (id: string) => {
-    await api.delete(`/obligations/${id}`);
-    fetchObligations();
-  };
-
-  const scanAll = async () => {
-    setScanning(true);
-    try {
-      const res = await api.post("/obligations/scan", { project_id: projectId });
-      setTimeout(() => fetchObligations(), 5000);
-      toast.info(t("scanning_documents", { count: res.data.documents }));
-    } catch { /* empty */ }
-    setScanning(false);
-  };
-
-  const createObligation = async () => {
-    if (!newDesc.trim()) return;
-    await api.post("/obligations", {
-      description: newDesc,
-      obligation_type: newType,
-      due_date: newDueDate || null,
-      project_id: projectId,
-    });
-    setShowModal(false);
-    setNewDesc("");
-    setNewType("other");
-    setNewDueDate("");
-    fetchObligations();
-  };
-
-  return (
-    <>
-      <div className="r-section">
-        <div className="r-section-header">
-          <p className="r-section-label">{t("obligations")}</p>
-          <div style={{ display: "flex", gap: "var(--space-sm)" }}>
-            <button className="r-btn-ghost" onClick={scanAll} disabled={scanning}>
-              {scanning ? t("scanning") : t("scan_documents")}
-            </button>
-            <button className="r-btn-primary" onClick={() => setShowModal(true)}>
-              + {t("add_obligation")}
-            </button>
-          </div>
-        </div>
-
-        <div className="r-filter-bar">
-          <select className="r-filter-select" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-            <option value="">{t("status")} — All</option>
-            <option value="open">{t("status_open")}</option>
-            <option value="resolved">{t("status_resolved")}</option>
-            <option value="snoozed">{t("status_snoozed")}</option>
-          </select>
-        </div>
-
-        {loading ? (
-          <p style={{ fontSize: "15px", color: "var(--ink-muted)" }}>{t("loading")}</p>
-        ) : obligations.length === 0 ? (
-          <div className="r-empty">
-            <span className="r-empty-icon">&#128203;</span>
-            <p className="r-empty-title">{t("no_project_obligations")}</p>
-            <p className="r-empty-desc">{t("no_project_obligations_desc")}</p>
-          </div>
-        ) : (
-          <div className="r-doc-list">
-            {obligations.map((ob) => (
-              <div key={ob.id} className={`r-obligation-row${ob.due_date && ob.status === "open" && daysLeft(ob.due_date) < 0 ? " overdue" : ob.due_date && ob.status === "open" && daysLeft(ob.due_date) <= 7 ? " warning" : ""}`}>
-                {ob.due_date ? (
-                  <>
-                    <span className="r-obligation-meta" style={{ minWidth: 80 }}>{ob.due_date}</span>
-                    <DaysLeftPill dueDate={ob.due_date} />
-                  </>
-                ) : (
-                  <span className="r-obligation-meta" style={{ minWidth: 80 }}>&mdash;</span>
-                )}
-                <span className="r-pill" style={{ minWidth: 60, textAlign: "center" }}>
-                  {t(`type_${ob.obligation_type}`)}
-                </span>
-                <span className="r-obligation-desc">{ob.description}</span>
-                {ob.document_title && (
-                  <span className="r-obligation-meta">{ob.document_title}</span>
-                )}
-                <div className="r-obligation-actions">
-                  <button className="r-link-muted" onClick={() => toggleStatus(ob)} title={ob.status === "open" ? t("mark_resolved") : t("mark_open")}>
-                    {ob.status === "open" ? "\u2713" : "\u21BA"}
-                  </button>
-                  <button className="r-link-danger" onClick={() => deleteObligation(ob.id)} title={t("delete")}>
-                    &times;
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {showModal && (
-        <div className="r-modal-backdrop" onClick={() => setShowModal(false)}>
-          <div className="r-modal" onClick={(e) => e.stopPropagation()}>
-            <p className="r-modal-title">{t("new_obligation")}</p>
-            <input className="r-input" placeholder={t("obligation_description")} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />
-            <select className="r-filter-select" value={newType} onChange={(e) => setNewType(e.target.value)}>
-              {TYPE_OPTIONS.map((tp) => (
-                <option key={tp} value={tp}>{t(`type_${tp}`)}</option>
-              ))}
-            </select>
-            <input className="r-input" type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} />
-            <div className="r-modal-actions">
-              <button className="r-btn-ghost" onClick={() => setShowModal(false)}>{t("cancel")}</button>
-              <button className="r-btn-primary" onClick={createObligation}>{t("save")}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-function DaysLeftPill({ dueDate }: { dueDate: string }) {
-  const { t } = useTranslation();
-  const d = daysLeft(dueDate);
-  if (d < 0) return <span className="r-pill overdue">{Math.abs(d)}d {t("overdue").toLowerCase()}</span>;
-  if (d === 0) return <span className="r-pill due-soon">{t("due_today")}</span>;
-  if (d <= 7) return <span className="r-pill due-soon">{t("due_in_days", { count: d })}</span>;
-  return <span className="r-pill on-track">{t("due_in_days", { count: d })}</span>;
 }
 
 /* ─── Folder Mappings ─── */
@@ -932,6 +747,105 @@ function ClausesTab({ projectId }: { projectId: string }) {
               ))}
             </div>
           </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+/* ─── Knowledge Tab ─── */
+
+interface KnowledgeStats {
+  documents_processed: number;
+  total_edges: number;
+}
+
+function KnowledgeTab({ projectId }: { projectId: string }) {
+  const { t } = useTranslation();
+  const [nodes, setNodes] = useState<GraphNode[]>([]);
+  const [edges, setEdges] = useState<GraphEdge[]>([]);
+  const [stats, setStats] = useState<KnowledgeStats>({ documents_processed: 0, total_edges: 0 });
+  const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+
+  const fetchGraph = () => {
+    api
+      .get("/knowledge-graph", { params: { project_id: projectId } })
+      .then(({ data }) => {
+        setNodes(data.nodes ?? []);
+        setEdges(data.edges ?? []);
+        const s = data.stats ?? {};
+        setStats({
+          documents_processed: s.documents_processed ?? 0,
+          total_edges: s.total_edges ?? (data.edges ?? []).length,
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchGraph(); }, [projectId]);
+
+  const handleScan = async () => {
+    setScanning(true);
+    try {
+      const { data } = await api.post("/knowledge-graph/scan", null, { params: { project_id: projectId } });
+      toast.info(t("scan_enqueued", { count: data.documents }));
+      setTimeout(() => fetchGraph(), 8000);
+    } catch { /* empty */ }
+    setScanning(false);
+  };
+
+  const clausePatterns = nodes
+    .filter((n) => n.type === "clause_type")
+    .sort((a, b) => (b.mention_count ?? 0) - (a.mention_count ?? 0));
+
+  if (loading) {
+    return (
+      <p style={{ fontFamily: "var(--font-mono)", fontSize: "0.75rem", letterSpacing: "0.05em", color: "var(--ink-muted)" }}>
+        {t("loading")}
+      </p>
+    );
+  }
+
+  return (
+    <>
+      {/* Header */}
+      <div className="r-section-header">
+        <h2 className="r-section-label">{t("entity_knowledge_graph")}</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-md)" }}>
+          <button className="r-btn-ghost" onClick={handleScan} disabled={scanning}>
+            {scanning ? t("scanning") : t("scan_documents")}
+          </button>
+          <span className="r-graph-stats">
+            {t("active_connections")}: {stats.total_edges.toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      {/* Graph */}
+      {nodes.length > 0 ? (
+        <div className="r-graph-container">
+          <EntityGraph nodes={nodes} edges={edges} />
+        </div>
+      ) : (
+        <div className="r-empty">
+          <p className="r-empty-title">{t("no_entities_title")}</p>
+          <p className="r-empty-desc">{t("no_entities_desc")}</p>
+        </div>
+      )}
+
+      {/* Clause patterns */}
+      {clausePatterns.length > 0 && (
+        <div>
+          <h2 className="r-section-label">{t("recurring_clause_patterns")}</h2>
+          <hr style={{ border: "none", borderTop: "1px solid var(--border-strong)", margin: "var(--space-sm) 0 var(--space-md)" }} />
+          {clausePatterns.map((node) => (
+            <div key={node.id} className="r-pattern-row">
+              <span className="r-pattern-tag">{node.name}</span>
+              <span className="r-pattern-count">{node.mention_count ?? 0} {t("occurrences")}</span>
+            </div>
+          ))}
         </div>
       )}
     </>

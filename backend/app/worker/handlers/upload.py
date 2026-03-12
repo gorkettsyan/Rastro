@@ -17,7 +17,7 @@ async def handle_manual_upload(body: dict, db: AsyncSession) -> None:
         raw_text = storage_service.download_text(doc.file_path)
         await ingestion_service.chunk_and_embed(db, doc, raw_text)
         queue_service.enqueue({
-            "job_type": "extract_dates",
+            "job_type": "extract_entities",
             "document_id": str(doc.id),
             "org_id": str(doc.org_id),
         })

@@ -77,7 +77,7 @@ export default function AddToProjectButton({ documentId }: Props) {
           top: "100%",
           zIndex: 20,
           marginTop: "4px",
-          background: "var(--bg-card)",
+          background: "#efece2",
           border: "1px solid var(--border-subtle)",
           borderRadius: "var(--radius-md)",
           boxShadow: "var(--shadow-md)",

@@ -56,7 +56,7 @@ export default function MemoryPage() {
       <LearningHint textKey="hint_memory" />
 
       <div className="r-section-header" style={{ marginBottom: "var(--space-xs)" }}>
-        <p className="r-page-title">🧠 {t("memories")}</p>
+        <p className="r-page-title" style={{ display: "flex", alignItems: "center", gap: 8 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z"/><path d="M10 21h4"/><path d="M9 17h6"/></svg>{t("memories")}</p>
         {memories.length > 0 && (
           <button onClick={handleDeleteAll} className="r-link-danger">
             {t("delete_all_memories")}
@@ -87,7 +87,7 @@ export default function MemoryPage() {
 
       {memories.length === 0 ? (
         <div className="r-empty">
-          <span className="r-empty-icon">🧠</span>
+          <svg className="r-empty-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7z"/><path d="M10 21h4"/><path d="M9 17h6"/></svg>
           <p className="r-empty-title">{t("no_memories")}</p>
           <p className="r-empty-desc">{t("memory_empty_hint")}</p>
         </div>
@@ -95,8 +95,8 @@ export default function MemoryPage() {
         <div className="r-doc-list">
           {memories.map((m) => (
             <div key={m.id} className="r-doc-row">
-              <span className="r-memory-source" style={{ color: "var(--ink-faint)", fontSize: "14px" }}>
-                {m.source === "auto" ? "🤖" : "✏️"}
+              <span className="r-memory-source" style={{ color: "var(--ink-muted)", fontSize: "11px", fontFamily: "var(--font-mono)", letterSpacing: "0.05em", textTransform: "uppercase" as const }}>
+                {m.source === "auto" ? "auto" : "manual"}
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 {editingId === m.id ? (

@@ -10,13 +10,13 @@ from app.models.message import Message
 from app.models.memory import Memory
 from app.models.invite import Invite
 from app.models.project_member import ProjectMember
-from app.models.obligation import Obligation
 from app.models.boe import BoeLaw, BoeChunk
 from app.models.folder_mapping import FolderMapping
+from app.models.entity import Entity, EntityEdge
 
 __all__ = [
     "Organization", "User", "IntegrationToken", "Project", "Document",
     "Chunk", "SearchLog", "Conversation", "Message", "Memory",
-    "Invite", "ProjectMember", "Obligation", "BoeLaw", "BoeChunk",
-    "FolderMapping",
+    "Invite", "ProjectMember", "BoeLaw", "BoeChunk",
+    "FolderMapping", "Entity", "EntityEdge",
 ]

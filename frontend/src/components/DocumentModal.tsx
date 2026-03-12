@@ -47,7 +47,7 @@ export default function DocumentModal({ documentId, onClose }: Props) {
     >
       <div
         style={{
-          background: "var(--bg-card)",
+          background: "#efece2",
           border: "1px solid var(--border-subtle)",
           borderRadius: "var(--radius-xl)",
           boxShadow: "var(--shadow-lg)",

@@ -22,7 +22,7 @@ interface UnassignedDoc {
 }
 
 interface ProjectStats {
-  [projectId: string]: { docCount: number; obligationCount: number; overdueCount: number };
+  [projectId: string]: { docCount: number };
 }
 
 function timeAgo(dateStr: string, t: (k: string, opts?: Record<string, unknown>) => string): string {
@@ -53,9 +53,8 @@ export default function Projects() {
           const { data } = await api.get("/auth/me");
           setUser(data);
         }
-        const [projectsRes, obligationsRes, docsRes, unassignedRes] = await Promise.all([
+        const [projectsRes, docsRes, unassignedRes] = await Promise.all([
           api.get("/projects"),
-          api.get("/obligations", { params: { status: "open" } }),
           api.get("/documents"),
           api.get("/folder-mappings/unassigned"),
         ]);
@@ -66,21 +65,8 @@ export default function Projects() {
         const docs = docsRes.data.items || [];
         for (const doc of docs) {
           if (!doc.project_id) continue;
-          if (!stats[doc.project_id]) stats[doc.project_id] = { docCount: 0, obligationCount: 0, overdueCount: 0 };
+          if (!stats[doc.project_id]) stats[doc.project_id] = { docCount: 0 };
           stats[doc.project_id].docCount++;
-        }
-        for (const ob of (obligationsRes.data.items ?? [])) {
-          if (!ob.project_id) continue;
-          if (!stats[ob.project_id]) stats[ob.project_id] = { docCount: 0, obligationCount: 0, overdueCount: 0 };
-          stats[ob.project_id].obligationCount++;
-          if (ob.due_date) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const due = new Date(ob.due_date + "T00:00:00");
-            if (due.getTime() < today.getTime()) {
-              stats[ob.project_id].overdueCount++;
-            }
-          }
         }
         setProjectStats(stats);
       } catch {
@@ -226,14 +212,13 @@ export default function Projects() {
                 <th>{t("project_title")}</th>
                 <th>{t("client_name")}</th>
                 <th>{t("documents")}</th>
-                <th>{t("obligations")}</th>
                 <th>{t("status")}</th>
                 <th style={{ textAlign: "right" }}>{t("last_sync")}</th>
               </tr>
             </thead>
             <tbody>
               {projects.map((p) => {
-                const stats = projectStats[p.id] || { docCount: 0, obligationCount: 0, overdueCount: 0 };
+                const stats = projectStats[p.id] || { docCount: 0 };
                 return (
                   <tr key={p.id} onClick={() => navigate(`/projects/${p.id}`)} className="r-table-row-link">
                     <td>
@@ -241,12 +226,6 @@ export default function Projects() {
                     </td>
                     <td className="r-table-muted">{p.client_name || "—"}</td>
                     <td>{stats.docCount}</td>
-                    <td>
-                      <span>{stats.obligationCount}</span>
-                      {stats.overdueCount > 0 && (
-                        <span className="r-project-overdue-badge" style={{ marginLeft: 6 }}>{stats.overdueCount}</span>
-                      )}
-                    </td>
                     <td>
                       <span className={`r-pill r-pill-status-${p.status}`}>{t(`status_${p.status}`)}</span>
                     </td>

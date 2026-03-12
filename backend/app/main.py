@@ -11,9 +11,9 @@ from app.api.search import router as search_router
 from app.api.chat import router as chat_router
 from app.api.memory import router as memory_router
 from app.api.team import router as team_router
-from app.api.obligations import router as obligations_router
 from app.api.clause_comparison import router as clause_comparison_router
 from app.api.folder_mappings import router as folder_mappings_router
+from app.api.knowledge_graph import router as knowledge_graph_router
 
 app = FastAPI(title="Rastro API", version="0.7.0")
 
@@ -33,9 +33,9 @@ app.include_router(search_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(memory_router, prefix="/api/v1")
 app.include_router(team_router, prefix="/api/v1")
-app.include_router(obligations_router, prefix="/api/v1")
 app.include_router(clause_comparison_router, prefix="/api/v1")
 app.include_router(folder_mappings_router, prefix="/api/v1")
+app.include_router(knowledge_graph_router, prefix="/api/v1")
 
 
 @app.get("/api/v1/health")

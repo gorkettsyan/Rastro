@@ -135,7 +135,7 @@ async def handle_gmail_thread(body: dict, db: AsyncSession) -> None:
 
         await ingestion_service.chunk_and_embed(db, doc, raw_text, extra_metadata={"source": "gmail", "thread_id": body["source_id"]})
         queue_service.enqueue({
-            "job_type": "extract_dates",
+            "job_type": "extract_entities",
             "document_id": str(doc.id),
             "org_id": str(doc.org_id),
         })

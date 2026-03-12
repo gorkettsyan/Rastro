@@ -13,7 +13,6 @@ export default function Header() {
   const navItems = [
     { label: t("nav_dashboard"), path: "/" },
     { label: t("nav_chat"), path: "/chat" },
-    { label: t("nav_obligations"), path: "/obligations" },
     { label: t("nav_clause_comparison"), path: "/clause-comparison" },
     { label: t("nav_integrations"), path: "/integrations" },
     { label: t("nav_settings"), path: "/settings" },
